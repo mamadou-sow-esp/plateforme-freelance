@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import logo from '../../assets/logo.png'
+import Avatar from '../../components/ui/Avatar'
 
 const PrestataireDashboard = () => {
   const { profile, signOut } = useAuth()
@@ -18,18 +19,16 @@ const PrestataireDashboard = () => {
   }, [])
 
   const fetchData = async () => {
-    // Missions assignées au prestataire
     const { data: missionsData } = await supabase
       .from('missions')
       .select(`
         *,
         categorie:categories(nom),
-        client:profiles!missions_client_id_fkey(nom)
+        client:profiles!missions_client_id_fkey(nom, avatar_url)
       `)
       .eq('prestataire_id', profile?.id)
       .order('created_at', { ascending: false })
 
-    // Profil prestataire
     const { data: profilData } = await supabase
       .from('prestataires')
       .select('*')
@@ -44,6 +43,11 @@ const PrestataireDashboard = () => {
   const handleSignOut = async () => {
     await signOut()
     navigate('/login')
+  }
+
+  const handleLivrer = async (missionId) => {
+    await supabase.from('missions').update({ statut: 'livre' }).eq('id', missionId)
+    fetchData()
   }
 
   const stats = {
@@ -73,14 +77,11 @@ const PrestataireDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50" style={font}>
-
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center">
-  <img src={logo} alt="Alicia" className="w-16 h-16 object-contain" />
-</div>
-
+            <img src={logo} alt="Alicia" className="w-16 h-16 object-contain" />
+          </div>
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/prestataire/dashboard"
               className="text-sm font-medium text-black border-b-2 border-black pb-0.5">
@@ -94,22 +95,19 @@ const PrestataireDashboard = () => {
               className="text-sm text-gray-400 hover:text-black transition-colors">
               Mon profil
             </Link>
+            <Link to="/prestataire/messages"
+              className="text-sm text-gray-400 hover:text-black transition-colors">
+              Messages
+            </Link>
           </nav>
-
           <div className="flex items-center gap-4">
             <div className="text-right hidden md:block">
               <p className="text-sm font-medium text-gray-900">{profile?.nom}</p>
               <p className="text-xs text-gray-400 font-light">Prestataire</p>
             </div>
-            <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-medium">
-                {profile?.nom?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <button
-              onClick={handleSignOut}
-              className="text-xs text-gray-400 hover:text-black transition-colors font-light"
-            >
+            <Avatar url={profile?.avatar_url} nom={profile?.nom} size="sm" />
+            <button onClick={handleSignOut}
+              className="text-xs text-gray-400 hover:text-black transition-colors font-light">
               Deconnexion
             </button>
           </div>
@@ -117,46 +115,35 @@ const PrestataireDashboard = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8">
-
-        {/* Welcome */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900 tracking-tight"
               style={{ letterSpacing: '-0.02em' }}>
               Bonjour, {profile?.nom?.split(' ')[0]}
             </h1>
-            <p className="text-gray-400 text-sm font-light mt-1">
-              Voici un apercu de votre activite
-            </p>
+            <p className="text-gray-400 text-sm font-light mt-1">Voici un apercu de votre activite</p>
           </div>
-          <Link
-            to="/prestataire/missions"
-            className="px-5 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-900 transition-all"
-            style={{ letterSpacing: '0.02em' }}
-          >
+          <Link to="/prestataire/missions"
+            className="px-5 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-900 transition-all">
             Trouver des missions
           </Link>
         </div>
 
-        {/* Profil completion */}
         {profil && !profil.verifie_cni && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-5 py-4 mb-6 flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-yellow-800">Completez votre profil</p>
               <p className="text-xs text-yellow-600 font-light mt-0.5">
-                Uploadez votre CNI pour obtenir le badge verifie et inspirer confiance
+                Uploadez votre CNI pour obtenir le badge verifie
               </p>
             </div>
-            <Link
-              to="/prestataire/profil"
-              className="px-3 py-1.5 bg-yellow-800 text-white text-xs font-medium rounded-lg hover:bg-yellow-900 transition-all whitespace-nowrap ml-4"
-            >
+            <Link to="/prestataire/profil"
+              className="px-3 py-1.5 bg-yellow-800 text-white text-xs font-medium rounded-lg hover:bg-yellow-900 transition-all whitespace-nowrap ml-4">
               Completer
             </Link>
           </div>
         )}
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { label: 'Total missions', value: stats.total },
@@ -171,7 +158,6 @@ const PrestataireDashboard = () => {
           ))}
         </div>
 
-        {/* Infos profil */}
         {profil && (
           <div className="bg-white rounded-xl border border-gray-100 p-6 mb-4">
             <div className="flex items-center justify-between mb-4">
@@ -181,11 +167,29 @@ const PrestataireDashboard = () => {
                 Modifier
               </Link>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="flex items-center gap-4 mb-4">
+              <Avatar url={profile?.avatar_url} nom={profile?.nom} size="lg" />
               <div>
-                <p className="text-xs text-gray-400 font-light mb-1">Metier</p>
-                <p className="text-sm font-medium text-gray-900">{profil.metier || '—'}</p>
+                <p className="font-medium text-gray-900">{profile?.nom}</p>
+                <p className="text-sm text-gray-400 font-light">{profil.metier}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                    profil.disponible
+                      ? 'bg-green-50 text-green-700 border border-green-200'
+                      : 'bg-gray-50 text-gray-500 border border-gray-200'
+                  }`}>
+                    {profil.disponible ? 'Disponible' : 'Indisponible'}
+                  </span>
+                  {profil.verifie_cni && (
+                    <span className="text-xs px-2.5 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full font-medium">
+                      Verifie
+                    </span>
+                  )}
+                </div>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <p className="text-xs text-gray-400 font-light mb-1">Note moyenne</p>
                 <p className="text-sm font-medium text-gray-900">
@@ -198,20 +202,10 @@ const PrestataireDashboard = () => {
                   {profil.prix_min?.toLocaleString()} — {profil.prix_max?.toLocaleString()} FCFA
                 </p>
               </div>
-              <div>
-                <p className="text-xs text-gray-400 font-light mb-1">Statut</p>
-                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                  profil.disponible
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-gray-50 text-gray-500 border border-gray-200'
-                }`}>
-                  {profil.disponible ? 'Disponible' : 'Indisponible'}
-                </span>
-              </div>
             </div>
 
             {profil.competences?.length > 0 && (
-              <div className="mt-4">
+              <div>
                 <p className="text-xs text-gray-400 font-light mb-2">Competences</p>
                 <div className="flex flex-wrap gap-2">
                   {profil.competences.map((c, i) => (
@@ -226,7 +220,6 @@ const PrestataireDashboard = () => {
           </div>
         )}
 
-        {/* Missions assignées */}
         <div className="bg-white rounded-xl border border-gray-100">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="font-medium text-gray-900 text-sm">Mes missions</h2>
@@ -246,41 +239,51 @@ const PrestataireDashboard = () => {
               <p className="text-gray-400 text-xs font-light mb-4">
                 Parcourez les missions disponibles et postulez
               </p>
-              <Link
-                to="/prestataire/missions"
-                className="inline-flex px-4 py-2 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-900 transition-all"
-              >
+              <Link to="/prestataire/missions"
+                className="inline-flex px-4 py-2 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-900 transition-all">
                 Voir les missions
               </Link>
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
-              {missions.slice(0, 5).map((mission) => (
+              {missions.map((mission) => (
                 <div key={mission.id}
-                  className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{mission.titre}</p>
-                    <p className="text-xs text-gray-400 font-light mt-0.5">
-                      {mission.categorie?.nom} — {mission.budget?.toLocaleString()} FCFA
-                    </p>
-                  </div>
-                  <div className="ml-4 flex items-center gap-3">
-                    {mission.client && (
-                      <p className="text-xs text-gray-400 font-light hidden md:block">
-                        {mission.client.nom}
+                  className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{mission.titre}</p>
+                      <p className="text-xs text-gray-400 font-light mt-0.5">
+                        {mission.categorie?.nom} — {mission.budget?.toLocaleString()} FCFA
                       </p>
-                    )}
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statutColor[mission.statut]}`}>
-                      {statutLabel[mission.statut]}
-                    </span>
+                    </div>
+                    <div className="ml-4 flex items-center gap-3">
+                      {mission.client && (
+                        <div className="hidden md:flex items-center gap-2">
+                          <Avatar url={mission.client.avatar_url} nom={mission.client.nom} size="xs" />
+                          <p className="text-xs text-gray-400 font-light">{mission.client.nom}</p>
+                        </div>
+                      )}
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statutColor[mission.statut]}`}>
+                        {statutLabel[mission.statut]}
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Bouton livrer */}
+                  {mission.statut === 'en_cours' && (
+                    <button
+                      onClick={() => handleLivrer(mission.id)}
+                      className="mt-2 px-3 py-1.5 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-900 transition-all"
+                    >
+                      Marquer comme livre
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* CTA */}
         <div className="mt-4 bg-black rounded-xl p-6 flex items-center justify-between">
           <div>
             <p className="text-white font-medium text-sm">Nouvelles missions disponibles</p>
@@ -288,10 +291,8 @@ const PrestataireDashboard = () => {
               Trouvez des missions correspondant a vos competences
             </p>
           </div>
-          <Link
-            to="/prestataire/missions"
-            className="px-4 py-2 bg-white text-black text-xs font-medium rounded-lg hover:bg-gray-100 transition-all"
-          >
+          <Link to="/prestataire/missions"
+            className="px-4 py-2 bg-white text-black text-xs font-medium rounded-lg hover:bg-gray-100 transition-all">
             Parcourir
           </Link>
         </div>

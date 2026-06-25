@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import logo from '../../assets/logo.png'
+import Avatar from '../../components/ui/Avatar'
 
 const RechercherMission = () => {
   const { profile, signOut } = useAuth()
@@ -11,6 +12,7 @@ const RechercherMission = () => {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [notification, setNotification] = useState('')
   const [filtres, setFiltres] = useState({
     categorie_id: '',
     localisation: '',
@@ -35,13 +37,12 @@ const RechercherMission = () => {
 
   const fetchMissions = async () => {
     setLoading(true)
-
     let query = supabase
       .from('missions')
       .select(`
         *,
         categorie:categories(nom),
-        client:profiles!missions_client_id_fkey(nom, localisation)
+        client:profiles!missions_client_id_fkey(nom, localisation, avatar_url)
       `)
       .eq('statut', 'en_attente')
       .is('prestataire_id', null)
@@ -71,13 +72,19 @@ const RechercherMission = () => {
   }
 
   const handlePostuler = async (missionId) => {
-    await supabase
+    const { error } = await supabase
       .from('missions')
-      .update({
-        prestataire_id: profile?.id,
-        statut: 'en_cours'
-      })
+      .update({ prestataire_id: profile?.id, statut: 'en_attente' })
       .eq('id', missionId)
+
+    if (error) {
+      setNotification('error:' + error.message)
+      setTimeout(() => setNotification(''), 4000)
+      return
+    }
+
+    setNotification('success:Candidature envoyee ! Le client doit accepter votre demande.')
+    setTimeout(() => setNotification(''), 4000)
     fetchMissions()
   }
 
@@ -89,13 +96,30 @@ const RechercherMission = () => {
   return (
     <div className="min-h-screen bg-gray-50" style={font}>
 
-      {/* Header */}
+      {notification && (
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg border max-w-sm ${
+          notification.startsWith('error')
+            ? 'bg-red-50 border-red-200 text-red-700'
+            : 'bg-white border-gray-200 text-gray-900'
+        }`} style={font}>
+          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+            notification.startsWith('error') ? 'bg-red-500' : 'bg-green-500'
+          }`} />
+          <p className="text-sm font-light flex-1">
+            {notification.startsWith('error')
+              ? notification.replace('error:', '')
+              : notification.replace('success:', '')}
+          </p>
+          <button onClick={() => setNotification('')}
+            className="text-gray-400 hover:text-gray-600 text-xs flex-shrink-0">✕</button>
+        </div>
+      )}
+
       <header className="bg-white border-b border-gray-100 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center">
             <img src={logo} alt="Alicia" className="w-16 h-16 object-contain" />
           </div>
-
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/prestataire/dashboard"
               className="text-sm text-gray-400 hover:text-black transition-colors">
@@ -109,18 +133,15 @@ const RechercherMission = () => {
               className="text-sm text-gray-400 hover:text-black transition-colors">
               Mon profil
             </Link>
+            <Link to="/prestataire/messages"
+              className="text-sm text-gray-400 hover:text-black transition-colors">
+              Messages
+            </Link>
           </nav>
-
           <div className="flex items-center gap-4">
-            <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-medium">
-                {profile?.nom?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <button
-              onClick={handleSignOut}
-              className="text-xs text-gray-400 hover:text-black transition-colors font-light"
-            >
+            <Avatar url={profile?.avatar_url} nom={profile?.nom} size="sm" />
+            <button onClick={handleSignOut}
+              className="text-xs text-gray-400 hover:text-black transition-colors font-light">
               Deconnexion
             </button>
           </div>
@@ -128,7 +149,6 @@ const RechercherMission = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8">
-
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900 tracking-tight"
             style={{ letterSpacing: '-0.02em' }}>
@@ -139,7 +159,6 @@ const RechercherMission = () => {
           </p>
         </div>
 
-        {/* Barre de recherche */}
         <div className="relative mb-6">
           <input
             type="text"
@@ -156,7 +175,6 @@ const RechercherMission = () => {
           </svg>
         </div>
 
-        {/* Filtres */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
           <select
             value={filtres.categorie_id}
@@ -189,7 +207,6 @@ const RechercherMission = () => {
           />
         </div>
 
-        {/* Liste missions */}
         {loading ? (
           <div className="text-center py-16">
             <p className="text-gray-400 text-sm font-light">Chargement...</p>
@@ -204,51 +221,31 @@ const RechercherMission = () => {
             {missions.map((mission) => (
               <div key={mission.id}
                 className="bg-white rounded-xl border border-gray-100 p-5 hover:border-gray-300 transition-all">
-
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-medium text-gray-900 mb-1">
-                      {mission.titre}
-                    </h3>
-                    <p className="text-xs text-gray-400 font-light line-clamp-2">
-                      {mission.description}
-                    </p>
+                    <h3 className="text-sm font-medium text-gray-900 mb-1">{mission.titre}</h3>
+                    <p className="text-xs text-gray-400 font-light line-clamp-2">{mission.description}</p>
                   </div>
                   <span className="ml-4 text-sm font-semibold text-gray-900 whitespace-nowrap">
                     {mission.budget?.toLocaleString()} FCFA
                   </span>
                 </div>
 
-                <div className="flex items-center gap-3 text-xs text-gray-400 font-light mb-4">
+                <div className="flex items-center gap-3 text-xs text-gray-400 font-light mb-4 flex-wrap">
                   {mission.categorie?.nom && (
                     <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full">
                       {mission.categorie.nom}
                     </span>
                   )}
-                  {mission.localisation && (
-                    <span>{mission.localisation}</span>
-                  )}
-                  {mission.delai && (
-                    <>
-                      <span>•</span>
-                      <span>{mission.delai}</span>
-                    </>
-                  )}
+                  {mission.localisation && <span>{mission.localisation}</span>}
+                  {mission.delai && <><span>•</span><span>{mission.delai}</span></>}
                 </div>
 
-                {/* Client */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center">
-                      <span className="text-gray-600 text-xs font-medium">
-                        {mission.client?.nom?.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <span className="text-xs text-gray-400 font-light">
-                      {mission.client?.nom}
-                    </span>
+                    <Avatar url={mission.client?.avatar_url} nom={mission.client?.nom} size="xs" />
+                    <span className="text-xs text-gray-400 font-light">{mission.client?.nom}</span>
                   </div>
-
                   <button
                     onClick={() => handlePostuler(mission.id)}
                     className="px-4 py-2 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-900 transition-all"

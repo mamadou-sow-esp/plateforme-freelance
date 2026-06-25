@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import logo from '../../assets/logo.png'
+import Avatar from '../../components/ui/Avatar'
 
 const Login = () => {
   const navigate = useNavigate()

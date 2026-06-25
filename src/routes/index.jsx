@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import Messages from '../pages/Messages'
+import ProfilPrestataire from '../pages/client/ProfilPrestataire'
 
 // Pages auth
 import Login from '../pages/auth/Login'
@@ -48,6 +50,32 @@ const AppRoutes = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
+        <Route path="/client/messages" element={
+  <ProtectedRoute allowedRoles={['client']}>
+    <Messages />
+  </ProtectedRoute>
+} />
+<Route path="/client/messages/:missionId" element={
+  <ProtectedRoute allowedRoles={['client']}>
+    <Messages />
+  </ProtectedRoute>
+} />
+<Route path="/prestataire/messages" element={
+  <ProtectedRoute allowedRoles={['prestataire']}>
+    <Messages />
+  </ProtectedRoute>
+} />
+<Route path="/prestataire/messages/:missionId" element={
+  <ProtectedRoute allowedRoles={['prestataire']}>
+    <Messages />
+  </ProtectedRoute>
+} />
+
+<Route path="/client/prestataire/:id" element={
+  <ProtectedRoute allowedRoles={['client']}>
+    <ProfilPrestataire />
+  </ProtectedRoute>
+} />
         {/* Client */}
         <Route path="/client/dashboard" element={
           <ProtectedRoute allowedRoles={['client']}>

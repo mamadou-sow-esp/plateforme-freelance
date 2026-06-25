@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import logo from '../../assets/logo.png'
+import Avatar from '../../components/ui/Avatar'
 
 const ClientDashboard = () => {
   const { profile, signOut } = useAuth()
@@ -22,7 +23,7 @@ const ClientDashboard = () => {
       .select(`
         *,
         categorie:categories(nom),
-        prestataire:profiles!missions_prestataire_id_fkey(nom)
+        prestataire:profiles!missions_prestataire_id_fkey(nom, avatar_url)
       `)
       .eq('client_id', profile?.id)
       .order('created_at', { ascending: false })
@@ -63,14 +64,11 @@ const ClientDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50" style={font}>
-
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center">
-  <img src={logo} alt="Alicia" className="w-16 h-16 object-contain" />
-</div>
-
+            <img src={logo} alt="Alicia" className="w-16 h-16 object-contain" />
+          </div>
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/client/dashboard"
               className="text-sm font-medium text-black border-b-2 border-black pb-0.5">
@@ -84,22 +82,19 @@ const ClientDashboard = () => {
               className="text-sm text-gray-400 hover:text-black transition-colors">
               Mes missions
             </Link>
+            <Link to="/client/messages"
+              className="text-sm text-gray-400 hover:text-black transition-colors">
+              Messages
+            </Link>
           </nav>
-
           <div className="flex items-center gap-4">
             <div className="text-right hidden md:block">
               <p className="text-sm font-medium text-gray-900">{profile?.nom}</p>
               <p className="text-xs text-gray-400 font-light">Client</p>
             </div>
-            <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-medium">
-                {profile?.nom?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <button
-              onClick={handleSignOut}
-              className="text-xs text-gray-400 hover:text-black transition-colors font-light"
-            >
+            <Avatar url={profile?.avatar_url} nom={profile?.nom} size="sm" />
+            <button onClick={handleSignOut}
+              className="text-xs text-gray-400 hover:text-black transition-colors font-light">
               Deconnexion
             </button>
           </div>
@@ -107,8 +102,6 @@ const ClientDashboard = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8">
-
-        {/* Welcome */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900 tracking-tight"
@@ -119,16 +112,12 @@ const ClientDashboard = () => {
               Voici un apercu de votre activite
             </p>
           </div>
-          <Link
-            to="/client/creer-mission"
-            className="px-5 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-900 transition-all"
-            style={{ letterSpacing: '0.02em' }}
-          >
+          <Link to="/client/creer-mission"
+            className="px-5 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-900 transition-all">
             + Nouvelle mission
           </Link>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { label: 'Total missions', value: stats.total },
@@ -143,7 +132,6 @@ const ClientDashboard = () => {
           ))}
         </div>
 
-        {/* Missions récentes */}
         <div className="bg-white rounded-xl border border-gray-100">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h2 className="font-medium text-gray-900 text-sm">Missions recentes</h2>
@@ -163,17 +151,16 @@ const ClientDashboard = () => {
               <p className="text-gray-400 text-xs font-light mb-4">
                 Creez votre premiere mission pour trouver un prestataire
               </p>
-              <Link
-                to="/client/creer-mission"
-                className="inline-flex px-4 py-2 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-900 transition-all"
-              >
+              <Link to="/client/creer-mission"
+                className="inline-flex px-4 py-2 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-900 transition-all">
                 Creer une mission
               </Link>
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
               {missions.slice(0, 5).map((mission) => (
-                <div key={mission.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                <div key={mission.id}
+                  className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{mission.titre}</p>
                     <p className="text-xs text-gray-400 font-light mt-0.5">
@@ -182,9 +169,10 @@ const ClientDashboard = () => {
                   </div>
                   <div className="ml-4 flex items-center gap-3">
                     {mission.prestataire && (
-                      <p className="text-xs text-gray-400 font-light hidden md:block">
-                        {mission.prestataire.nom}
-                      </p>
+                      <div className="hidden md:flex items-center gap-2">
+                        <Avatar url={mission.prestataire.avatar_url} nom={mission.prestataire.nom} size="xs" />
+                        <p className="text-xs text-gray-400 font-light">{mission.prestataire.nom}</p>
+                      </div>
                     )}
                     <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statutColor[mission.statut]}`}>
                       {statutLabel[mission.statut]}
@@ -196,18 +184,13 @@ const ClientDashboard = () => {
           )}
         </div>
 
-        {/* CTA rechercher */}
         <div className="mt-4 bg-black rounded-xl p-6 flex items-center justify-between">
           <div>
             <p className="text-white font-medium text-sm">Trouvez le bon prestataire</p>
-            <p className="text-gray-400 text-xs font-light mt-1">
-              Parcourez notre catalogue de talents
-            </p>
+            <p className="text-gray-400 text-xs font-light mt-1">Parcourez notre catalogue de talents</p>
           </div>
-          <Link
-            to="/client/rechercher"
-            className="px-4 py-2 bg-white text-black text-xs font-medium rounded-lg hover:bg-gray-100 transition-all"
-          >
+          <Link to="/client/rechercher"
+            className="px-4 py-2 bg-white text-black text-xs font-medium rounded-lg hover:bg-gray-100 transition-all">
             Rechercher
           </Link>
         </div>

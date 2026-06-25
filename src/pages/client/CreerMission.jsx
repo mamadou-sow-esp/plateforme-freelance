@@ -3,13 +3,13 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import logo from '../../assets/logo.png'
+import Avatar from '../../components/ui/Avatar'
 
 const CreerMission = () => {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const prestataire_id = searchParams.get('prestataire')
-
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -66,10 +66,8 @@ const CreerMission = () => {
         })
 
       if (missionError) throw missionError
-
       setSuccess(true)
       setTimeout(() => navigate('/client/missions'), 2000)
-
     } catch (err) {
       setError(err.message || 'Une erreur est survenue')
     } finally {
@@ -100,14 +98,11 @@ const CreerMission = () => {
 
   return (
     <div className="min-h-screen bg-gray-50" style={font}>
-
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center">
             <img src={logo} alt="Alicia" className="w-16 h-16 object-contain" />
           </div>
-
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/client/dashboard"
               className="text-sm text-gray-400 hover:text-black transition-colors">
@@ -121,18 +116,19 @@ const CreerMission = () => {
               className="text-sm text-gray-400 hover:text-black transition-colors">
               Mes missions
             </Link>
+            <Link to="/client/messages"
+              className="text-sm text-gray-400 hover:text-black transition-colors">
+              Messages
+            </Link>
           </nav>
-
           <div className="flex items-center gap-4">
             <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
               <span className="text-white text-xs font-medium">
                 {profile?.nom?.charAt(0).toUpperCase()}
               </span>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="text-xs text-gray-400 hover:text-black transition-colors font-light"
-            >
+            <button onClick={handleSignOut}
+              className="text-xs text-gray-400 hover:text-black transition-colors font-light">
               Deconnexion
             </button>
           </div>
@@ -140,8 +136,6 @@ const CreerMission = () => {
       </header>
 
       <main className="max-w-2xl mx-auto px-6 py-8">
-
-        {/* Header */}
         <div className="mb-8">
           <Link to="/client/dashboard"
             className="text-xs text-gray-400 hover:text-black transition-colors font-light flex items-center gap-1 mb-4">
@@ -166,8 +160,6 @@ const CreerMission = () => {
         )}
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-100 p-6 space-y-6">
-
-          {/* Titre */}
           <div>
             <label className="block text-xs font-medium text-gray-400 uppercase tracking-widest mb-2">
               Titre de la mission *
@@ -183,7 +175,6 @@ const CreerMission = () => {
             />
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-xs font-medium text-gray-400 uppercase tracking-widest mb-2">
               Description detaillee *
@@ -193,13 +184,12 @@ const CreerMission = () => {
               value={form.description}
               onChange={handleChange}
               rows={5}
-              placeholder="Decrivez precisement votre besoin, les livrables attendus, les contraintes..."
+              placeholder="Decrivez precisement votre besoin..."
               style={font}
               className="w-full px-4 py-3.5 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all bg-gray-50 focus:bg-white font-light resize-none"
             />
           </div>
 
-          {/* Categorie + Budget */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-400 uppercase tracking-widest mb-2">
@@ -218,7 +208,6 @@ const CreerMission = () => {
                 ))}
               </select>
             </div>
-
             <div>
               <label className="block text-xs font-medium text-gray-400 uppercase tracking-widest mb-2">
                 Budget (FCFA) *
@@ -235,7 +224,6 @@ const CreerMission = () => {
             </div>
           </div>
 
-          {/* Localisation + Délai */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-400 uppercase tracking-widest mb-2">
@@ -251,7 +239,6 @@ const CreerMission = () => {
                 className="w-full px-4 py-3.5 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all bg-gray-50 focus:bg-white font-light"
               />
             </div>
-
             <div>
               <label className="block text-xs font-medium text-gray-400 uppercase tracking-widest mb-2">
                 Delai souhaite

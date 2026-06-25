@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import logo from '../../assets/logo.png'
+import Avatar from '../../components/ui/Avatar'
 
 const AdminDashboard = () => {
   const { profile, signOut } = useAuth()

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import logo from '../../assets/logo.png'
+import Avatar from '../../components/ui/Avatar'
 
 const RechercherPrestataire = () => {
   const { profile, signOut } = useAuth()
@@ -25,6 +26,10 @@ const RechercherPrestataire = () => {
     fetchPrestataires()
   }, [])
 
+  useEffect(() => {
+    fetchPrestataires()
+  }, [filtres, search])
+
   const fetchCategories = async () => {
     const { data } = await supabase.from('categories').select('*')
     setCategories(data || [])
@@ -34,16 +39,12 @@ const RechercherPrestataire = () => {
     setLoading(true)
     let query = supabase
       .from('prestataires')
-      .select(`
-        *,
-        profile:profiles(nom, localisation, avatar_url)
-      `)
+      .select(`*, profile:profiles(id, nom, localisation, avatar_url)`)
 
     if (filtres.disponible) query = query.eq('disponible', true)
     if (filtres.prix_max) query = query.lte('prix_max', filtres.prix_max)
 
     const { data } = await query
-
     let result = data || []
 
     if (search) {
@@ -64,10 +65,6 @@ const RechercherPrestataire = () => {
     setLoading(false)
   }
 
-  useEffect(() => {
-    fetchPrestataires()
-  }, [filtres, search])
-
   const handleSignOut = async () => {
     await signOut()
     navigate('/login')
@@ -75,14 +72,11 @@ const RechercherPrestataire = () => {
 
   return (
     <div className="min-h-screen bg-gray-50" style={font}>
-
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center">
             <img src={logo} alt="Alicia" className="w-16 h-16 object-contain" />
           </div>
-
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/client/dashboard"
               className="text-sm text-gray-400 hover:text-black transition-colors">
@@ -96,18 +90,15 @@ const RechercherPrestataire = () => {
               className="text-sm text-gray-400 hover:text-black transition-colors">
               Mes missions
             </Link>
+            <Link to="/client/messages"
+              className="text-sm text-gray-400 hover:text-black transition-colors">
+              Messages
+            </Link>
           </nav>
-
           <div className="flex items-center gap-4">
-            <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-medium">
-                {profile?.nom?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <button
-              onClick={handleSignOut}
-              className="text-xs text-gray-400 hover:text-black transition-colors font-light"
-            >
+            <Avatar url={profile?.avatar_url} nom={profile?.nom} size="sm" />
+            <button onClick={handleSignOut}
+              className="text-xs text-gray-400 hover:text-black transition-colors font-light">
               Deconnexion
             </button>
           </div>
@@ -115,8 +106,6 @@ const RechercherPrestataire = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8">
-
-        {/* Titre */}
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900 tracking-tight"
             style={{ letterSpacing: '-0.02em' }}>
@@ -127,7 +116,6 @@ const RechercherPrestataire = () => {
           </p>
         </div>
 
-        {/* Barre de recherche */}
         <div className="relative mb-6">
           <input
             type="text"
@@ -144,13 +132,12 @@ const RechercherPrestataire = () => {
           </svg>
         </div>
 
-        {/* Filtres */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           <select
             value={filtres.categorie}
             onChange={(e) => setFiltres({ ...filtres, categorie: e.target.value })}
             style={font}
-            className="px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all bg-white font-light"
+            className="px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:border-black transition-all bg-white font-light"
           >
             <option value="">Toutes categories</option>
             {categories.map(c => (
@@ -164,7 +151,7 @@ const RechercherPrestataire = () => {
             onChange={(e) => setFiltres({ ...filtres, localisation: e.target.value })}
             placeholder="Localisation"
             style={font}
-            className="px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all bg-white font-light"
+            className="px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-black transition-all bg-white font-light"
           />
 
           <input
@@ -173,7 +160,7 @@ const RechercherPrestataire = () => {
             onChange={(e) => setFiltres({ ...filtres, prix_max: e.target.value })}
             placeholder="Budget max (FCFA)"
             style={font}
-            className="px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all bg-white font-light"
+            className="px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-black transition-all bg-white font-light"
           />
 
           <button
@@ -188,7 +175,6 @@ const RechercherPrestataire = () => {
           </button>
         </div>
 
-        {/* Liste prestataires */}
         {loading ? (
           <div className="text-center py-16">
             <p className="text-gray-400 text-sm font-light">Chargement...</p>
@@ -202,16 +188,10 @@ const RechercherPrestataire = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {prestataires.map((p) => (
               <div key={p.id}
-                className="bg-white rounded-xl border border-gray-100 p-5 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer">
-
-                {/* Header card */}
+                className="bg-white rounded-xl border border-gray-100 p-5 hover:border-gray-300 hover:shadow-sm transition-all">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-900 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-sm font-medium">
-                        {p.profile?.nom?.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                    <Avatar url={p.profile?.avatar_url} nom={p.profile?.nom} size="md" />
                     <div>
                       <p className="text-sm font-medium text-gray-900">{p.profile?.nom}</p>
                       <p className="text-xs text-gray-400 font-light">{p.metier}</p>
@@ -224,7 +204,6 @@ const RechercherPrestataire = () => {
                   )}
                 </div>
 
-                {/* Competences */}
                 {p.competences?.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-4">
                     {p.competences.slice(0, 3).map((c, i) => (
@@ -241,33 +220,35 @@ const RechercherPrestataire = () => {
                   </div>
                 )}
 
-                {/* Infos */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100 mb-3">
                   <div>
-                    <p className="text-xs text-gray-400 font-light">
-                      {p.profile?.localisation || 'Dakar'}
-                    </p>
+                    <p className="text-xs text-gray-400 font-light">{p.profile?.localisation || 'Dakar'}</p>
                     <p className="text-sm font-medium text-gray-900 mt-0.5">
                       {p.prix_min?.toLocaleString()} — {p.prix_max?.toLocaleString()} FCFA
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     {p.note_moyenne > 0 && (
-                      <span className="text-xs text-gray-500 font-medium">
-                        {p.note_moyenne}/5
-                      </span>
+                      <span className="text-xs text-gray-500 font-medium">{p.note_moyenne}/5</span>
                     )}
                     <span className={`w-2 h-2 rounded-full ${p.disponible ? 'bg-green-400' : 'bg-gray-300'}`} />
                   </div>
                 </div>
 
-                <button
-                  onClick={() => navigate(`/client/creer-mission?prestataire=${p.id}`)}
-                  className="w-full mt-3 py-2.5 border border-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-black hover:text-white hover:border-black transition-all"
-                  style={{ letterSpacing: '0.04em' }}
-                >
-                  Contacter
-                </button>
+                <div className="flex gap-2">
+                  <Link
+                    to={`/client/prestataire/${p.profile?.id}`}
+                    className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-50 transition-all text-center"
+                  >
+                    Voir profil
+                  </Link>
+                  <button
+                    onClick={() => navigate(`/client/creer-mission?prestataire=${p.id}`)}
+                    className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:bg-black hover:text-white hover:border-black transition-all"
+                  >
+                    Contacter
+                  </button>
+                </div>
               </div>
             ))}
           </div>
