@@ -2,21 +2,18 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import logo from '../../assets/logo.png'
-import Avatar from '../../components/ui/Avatar'
 import Navbar from '../../components/layout/Navbar'
+import Footer from '../../components/layout/Footer'
+import Avatar from '../../components/ui/Avatar'
+import StatusBadge from '../../components/ui/StatusBadge'
 
 const ClientDashboard = () => {
-  const { profile, signOut } = useAuth()
+  const { profile } = useAuth()
   const navigate = useNavigate()
   const [missions, setMissions] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const font = { fontFamily: "'DM Sans', sans-serif" }
-
-  useEffect(() => {
-    fetchMissions()
-  }, [])
+  useEffect(() => { fetchMissions() }, [])
 
   const fetchMissions = async () => {
     const { data } = await supabase
@@ -33,11 +30,6 @@ const ClientDashboard = () => {
     setLoading(false)
   }
 
-  const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
-  }
-
   const stats = {
     total: missions.length,
     en_cours: missions.filter(m => m.statut === 'en_cours').length,
@@ -45,122 +37,145 @@ const ClientDashboard = () => {
     en_attente: missions.filter(m => m.statut === 'en_attente').length,
   }
 
-  const statutLabel = {
-    en_attente: 'En attente',
-    en_cours: 'En cours',
-    livre: 'Livre',
-    valide: 'Valide',
-    conteste: 'Conteste',
-    annule: 'Annule',
-  }
-
-  const statutColor = {
-    en_attente: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
-    en_cours: 'bg-blue-50 text-blue-700 border border-blue-200',
-    livre: 'bg-purple-50 text-purple-700 border border-purple-200',
-    valide: 'bg-green-50 text-green-700 border border-green-200',
-    conteste: 'bg-red-50 text-red-700 border border-red-200',
-    annule: 'bg-gray-50 text-gray-500 border border-gray-200',
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50" style={font}>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
 
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900 tracking-tight"
-              style={{ letterSpacing: '-0.02em' }}>
-              Bonjour, {profile?.nom?.split(' ')[0]}
-            </h1>
-            <p className="text-gray-400 text-sm font-light mt-1">
-              Voici un apercu de votre activite
-            </p>
+      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-10">
+
+        {/* Hero */}
+        <div className="flex items-start justify-between mb-10">
+          <div className="flex items-center gap-4">
+            <Avatar url={profile?.avatar_url} nom={profile?.nom} size="lg" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+                Bonjour, {profile?.nom?.split(' ')[0]}
+              </h1>
+              <p className="text-gray-400 text-sm mt-1">Voici un apercu de votre activite</p>
+            </div>
           </div>
-          <Link to="/client/creer-mission"
-            className="px-5 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-900 transition-all">
-            + Nouvelle mission
+          <Link
+            to="/client/creer-mission"
+            className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-all shadow-card">
+            <span className="text-lg leading-none">+</span>
+            Nouvelle mission
           </Link>
         </div>
 
+        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Total missions', value: stats.total },
-            { label: 'En attente', value: stats.en_attente },
-            { label: 'En cours', value: stats.en_cours },
-            { label: 'Terminees', value: stats.valide },
+            { label: 'Total missions', value: stats.total, color: 'text-gray-900' },
+            { label: 'En attente', value: stats.en_attente, color: 'text-amber-600' },
+            { label: 'En cours', value: stats.en_cours, color: 'text-blue-600' },
+            { label: 'Terminees', value: stats.valide, color: 'text-emerald-600' },
           ].map((stat, i) => (
-            <div key={i} className="bg-white rounded-xl p-5 border border-gray-100">
-              <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
-              <p className="text-xs text-gray-400 font-light mt-1">{stat.label}</p>
+            <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-card hover:shadow-card-hover transition-all">
+              <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+              <p className="text-xs text-gray-400 font-medium mt-2 uppercase tracking-wider">{stat.label}</p>
             </div>
           ))}
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-100">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <h2 className="font-medium text-gray-900 text-sm">Missions recentes</h2>
-            <Link to="/client/missions"
-              className="text-xs text-gray-400 hover:text-black transition-colors">
-              Voir tout
-            </Link>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {loading ? (
-            <div className="px-6 py-12 text-center">
-              <p className="text-gray-400 text-sm font-light">Chargement...</p>
-            </div>
-          ) : missions.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <p className="text-gray-900 font-medium text-sm mb-1">Aucune mission pour l'instant</p>
-              <p className="text-gray-400 text-xs font-light mb-4">
-                Creez votre premiere mission pour trouver un prestataire
-              </p>
-              <Link to="/client/creer-mission"
-                className="inline-flex px-4 py-2 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-900 transition-all">
-                Creer une mission
+          {/* Missions récentes */}
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-900">Missions recentes</h2>
+              <Link to="/client/missions" className="text-xs font-medium text-gray-400 hover:text-gray-900 transition-colors">
+                Voir tout
               </Link>
             </div>
-          ) : (
-            <div className="divide-y divide-gray-50">
-              {missions.slice(0, 5).map((mission) => (
-                <div key={mission.id}
-                  className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{mission.titre}</p>
-                    <p className="text-xs text-gray-400 font-light mt-0.5">
-                      {mission.categorie?.nom} — {mission.budget?.toLocaleString()} FCFA
-                    </p>
-                  </div>
-                  <div className="ml-4 flex items-center gap-3">
-                    {mission.prestataire && (
-                      <div className="hidden md:flex items-center gap-2">
-                        <Avatar url={mission.prestataire.avatar_url} nom={mission.prestataire.nom} size="xs" />
-                        <p className="text-xs text-gray-400 font-light">{mission.prestataire.nom}</p>
-                      </div>
-                    )}
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statutColor[mission.statut]}`}>
-                      {statutLabel[mission.statut]}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
-        <div className="mt-4 bg-black rounded-xl p-6 flex items-center justify-between">
-          <div>
-            <p className="text-white font-medium text-sm">Trouvez le bon prestataire</p>
-            <p className="text-gray-400 text-xs font-light mt-1">Parcourez notre catalogue de talents</p>
+            {loading ? (
+              <div className="px-6 py-12 text-center">
+                <div className="w-8 h-8 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto" />
+              </div>
+            ) : missions.length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                </div>
+                <p className="text-gray-900 font-semibold text-sm mb-1">Aucune mission pour l instant</p>
+                <p className="text-gray-400 text-xs mb-4">Creez votre premiere mission</p>
+                <Link to="/client/creer-mission"
+                  className="inline-flex px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
+                  Creer une mission
+                </Link>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {missions.slice(0, 5).map((mission) => (
+                  <div key={mission.id}
+                    className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => navigate('/client/missions')}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{mission.titre}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {mission.categorie?.nom} · {mission.budget?.toLocaleString()} FCFA
+                      </p>
+                    </div>
+                    <div className="ml-4 flex items-center gap-3">
+                      {mission.prestataire && (
+                        <div className="hidden md:flex items-center gap-2">
+                          <Avatar url={mission.prestataire.avatar_url} nom={mission.prestataire.nom} size="xs" />
+                          <p className="text-xs text-gray-400">{mission.prestataire.nom}</p>
+                        </div>
+                      )}
+                      <StatusBadge statut={mission.statut} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <Link to="/client/rechercher"
-            className="px-4 py-2 bg-white text-black text-xs font-medium rounded-lg hover:bg-gray-100 transition-all">
-            Rechercher
-          </Link>
+
+          {/* Actions rapides */}
+          <div className="space-y-4">
+            <div className="bg-gray-900 rounded-2xl p-6 text-white">
+              <h3 className="font-semibold text-base mb-1">Trouver un talent</h3>
+              <p className="text-gray-400 text-xs mb-4 leading-relaxed">
+                Parcourez notre catalogue de prestataires verifies
+              </p>
+              <Link to="/client/rechercher"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-900 text-xs font-semibold rounded-xl hover:bg-gray-100 transition-all">
+                Rechercher
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
+
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-card">
+              <h3 className="font-semibold text-gray-900 text-sm mb-3">Acces rapide</h3>
+              <div className="space-y-2">
+                {[
+  { to: '/client/suivi', label: 'Suivi des missions' },
+  { to: '/client/messages', label: 'Mes messages' },
+  { to: '/client/profil', label: 'Mon profil' },
+].map(item => (
+  <Link key={item.to} to={item.to}
+    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-all group">
+    <span className="text-sm text-gray-600 group-hover:text-gray-900 font-medium transition-colors">
+      {item.label}
+    </span>
+    <svg className="w-4 h-4 text-gray-300 ml-auto group-hover:text-gray-500 transition-colors"
+      fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
+  </Link>
+))}
+              </div>
+            </div>
+          </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   )
 }

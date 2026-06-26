@@ -1,14 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import logo from '../../assets/logo.png'
-import Avatar from '../../components/ui/Avatar'
 import Navbar from '../../components/layout/Navbar'
+import Footer from '../../components/layout/Footer'
+import Avatar from '../../components/ui/Avatar'
 
 const MonProfilClient = () => {
-  const { profile, signOut, fetchProfile } = useAuth()
-  const navigate = useNavigate()
+  const { profile, fetchProfile } = useAuth()
   const [loading, setLoading] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -20,8 +19,6 @@ const MonProfilClient = () => {
     localisation: '',
     bio: '',
   })
-
-  const font = { fontFamily: "'DM Sans', sans-serif" }
 
   useEffect(() => {
     if (profile) {
@@ -42,20 +39,12 @@ const MonProfilClient = () => {
     setLoading(true)
     setError('')
     setSuccess(false)
-
     try {
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({
-          nom: form.nom,
-          telephone: form.telephone,
-          localisation: form.localisation,
-          bio: form.bio,
-        })
+        .update({ nom: form.nom, telephone: form.telephone, localisation: form.localisation, bio: form.bio })
         .eq('id', profile?.id)
-
       if (profileError) throw profileError
-
       await fetchProfile(profile?.id)
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
@@ -69,88 +58,67 @@ const MonProfilClient = () => {
   const handleUploadAvatar = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-
     setUploadingAvatar(true)
     setError('')
-
     try {
       const ext = file.name.split('.').pop()
-      const fileName = `${profile?.id}/avatar.${ext}`
-
+      const fileName = profile?.id + '/avatar.' + ext
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file, { upsert: true })
-
+        .from('avatars').upload(fileName, file, { upsert: true })
       if (uploadError) throw uploadError
-
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName)
-
-      await supabase
-        .from('profiles')
-        .update({ avatar_url: urlData.publicUrl })
-        .eq('id', profile?.id)
-
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName)
+      await supabase.from('profiles').update({ avatar_url: urlData.publicUrl }).eq('id', profile?.id)
       await fetchProfile(profile?.id)
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
-      setError("Erreur lors de l'upload de la photo.")
+      setError("Erreur lors de l upload de la photo.")
     } finally {
       setUploadingAvatar(false)
     }
   }
 
-  const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50" style={font}>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
 
-      <main className="max-w-2xl mx-auto px-6 py-8">
+      <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-10">
+
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight" style={{ letterSpacing: '-0.02em' }}>
-            Mon profil
-          </h1>
-          <p className="text-gray-400 text-sm font-light mt-1">Gerez vos informations personnelles</p>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Mon profil</h1>
+          <p className="text-gray-400 text-sm mt-1">Gerez vos informations personnelles</p>
         </div>
 
         {error && (
-          <div className="border border-red-200 bg-red-50 text-red-600 rounded-lg px-4 py-3 mb-6 text-sm font-light">
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-6 text-sm font-medium">
             {error}
           </div>
         )}
-
         {success && (
-          <div className="border border-green-200 bg-green-50 text-green-700 rounded-lg px-4 py-3 mb-6 text-sm font-light">
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 mb-6 text-sm font-medium">
             Profil mis a jour avec succes
           </div>
         )}
 
         <div className="space-y-4">
 
-          {/* Photo de profil */}
-          <div className="bg-white rounded-xl border border-gray-100 p-6">
-            <h2 className="font-medium text-gray-900 text-sm mb-5">Photo de profil</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
+            <h2 className="font-bold text-gray-900 text-sm mb-5">Photo de profil</h2>
             <div className="flex items-center gap-6">
               <div className="relative flex-shrink-0">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="Avatar"
-                    className="w-24 h-24 rounded-full object-cover border-2 border-gray-100" />
+                    className="w-24 h-24 rounded-2xl object-cover border-2 border-gray-100" />
                 ) : (
-                  <div className="w-24 h-24 bg-gray-900 rounded-full flex items-center justify-center">
-                    <span className="text-white text-3xl font-medium">
+                  <div className="w-24 h-24 bg-gray-900 rounded-2xl flex items-center justify-center">
+                    <span className="text-white text-3xl font-bold">
                       {profile?.nom?.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
-                <label className="absolute -bottom-1 -right-1 w-8 h-8 bg-black rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-800 transition-all">
+                <label className="absolute -bottom-2 -right-2 w-8 h-8 bg-gray-900 rounded-xl flex items-center justify-center cursor-pointer hover:bg-black transition-all shadow-card">
                   {uploadingAvatar ? (
-                    <span className="text-white text-xs">...</span>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
                     <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -162,90 +130,83 @@ const MonProfilClient = () => {
                 </label>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-900">{profile?.nom}</p>
-                <p className="text-xs text-gray-400 font-light mt-0.5">{profile?.email}</p>
-                <p className="text-xs text-gray-400 font-light mt-3">
-                  Cliquez sur l'icone pour changer votre photo
-                </p>
+                <p className="text-sm font-bold text-gray-900">{profile?.nom}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{profile?.email}</p>
+                <p className="text-xs text-gray-400 mt-3">Cliquez sur l icone pour changer votre photo</p>
               </div>
             </div>
           </div>
 
-          {/* Informations */}
-          <div className="bg-white rounded-xl border border-gray-100 p-6">
-            <h2 className="font-medium text-gray-900 text-sm mb-5">Informations personnelles</h2>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
+            <h2 className="font-bold text-gray-900 text-sm mb-5">Informations personnelles</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-widest mb-2">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   Nom complet
                 </label>
                 <input type="text" name="nom" value={form.nom} onChange={handleChange}
-                  placeholder="Votre nom" style={font}
-                  className="w-full px-4 py-3.5 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all bg-gray-50 focus:bg-white font-light" />
+                  placeholder="Votre nom"
+                  className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
               </div>
-
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-widest mb-2">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   Email
                 </label>
-                <input type="email" value={profile?.email || ''} disabled style={font}
-                  className="w-full px-4 py-3.5 border border-gray-100 rounded-lg text-sm text-gray-400 bg-gray-50 font-light cursor-not-allowed" />
-                <p className="text-xs text-gray-400 font-light mt-1">L'email ne peut pas etre modifie</p>
+                <input type="email" value={profile?.email || ''} disabled
+                  className="w-full px-4 py-3.5 border border-gray-100 rounded-xl text-sm text-gray-400 bg-gray-50 cursor-not-allowed" />
+                <p className="text-xs text-gray-400 mt-1">L email ne peut pas etre modifie</p>
               </div>
-
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-widest mb-2">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   Telephone
                 </label>
                 <input type="tel" name="telephone" value={form.telephone} onChange={handleChange}
-                  placeholder="+221 77 000 00 00" style={font}
-                  className="w-full px-4 py-3.5 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all bg-gray-50 focus:bg-white font-light" />
+                  placeholder="+221 77 000 00 00"
+                  className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
               </div>
-
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-widest mb-2">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   Localisation
                 </label>
                 <input type="text" name="localisation" value={form.localisation} onChange={handleChange}
-                  placeholder="Dakar, Plateau" style={font}
-                  className="w-full px-4 py-3.5 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all bg-gray-50 focus:bg-white font-light" />
+                  placeholder="Dakar, Plateau"
+                  className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
               </div>
-
               <div>
-                <label className="block text-xs font-medium text-gray-400 uppercase tracking-widest mb-2">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                   Bio
                 </label>
                 <textarea name="bio" value={form.bio} onChange={handleChange} rows={3}
-                  placeholder="Decrivez-vous en quelques mots..." style={font}
-                  className="w-full px-4 py-3.5 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all bg-gray-50 focus:bg-white font-light resize-none" />
+                  placeholder="Decrivez-vous en quelques mots..."
+                  className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white resize-none" />
               </div>
             </div>
           </div>
 
-          {/* Stats rapides */}
-          <div className="bg-white rounded-xl border border-gray-100 p-6">
-            <h2 className="font-medium text-gray-900 text-sm mb-4">Mon activite</h2>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
+            <h2 className="font-bold text-gray-900 text-sm mb-4">Acces rapide</h2>
+            <div className="grid grid-cols-2 gap-3">
               <Link to="/client/missions"
-                className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all">
-                <p className="text-xs text-gray-400 font-light mb-1">Mes missions</p>
-                <p className="text-sm font-medium text-gray-900">Voir tout</p>
+                className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all group">
+                <p className="text-xs text-gray-400 mb-1">Mes missions</p>
+                <p className="text-sm font-semibold text-gray-900 group-hover:text-black">Voir tout</p>
               </Link>
               <Link to="/client/messages"
-                className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all">
-                <p className="text-xs text-gray-400 font-light mb-1">Messages</p>
-                <p className="text-sm font-medium text-gray-900">Voir tout</p>
+                className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all group">
+                <p className="text-xs text-gray-400 mb-1">Messages</p>
+                <p className="text-sm font-semibold text-gray-900 group-hover:text-black">Voir tout</p>
               </Link>
             </div>
           </div>
 
           <button onClick={handleSave} disabled={loading}
-            style={{ ...font, letterSpacing: '0.06em' }}
-            className="w-full py-3.5 bg-black text-white font-medium text-xs rounded-xl hover:bg-gray-900 transition-all uppercase disabled:opacity-40">
+            className="w-full py-3.5 bg-gray-900 text-white font-semibold text-sm rounded-xl hover:bg-black transition-all disabled:opacity-40">
             {loading ? 'Sauvegarde...' : 'Sauvegarder les modifications'}
           </button>
         </div>
       </main>
+
+      <Footer />
     </div>
   )
 }

@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import logo from '../../assets/logo.png'
-import Avatar from '../../components/ui/Avatar'
 import Navbar from '../../components/layout/Navbar'
+import Footer from '../../components/layout/Footer'
+import Avatar from '../../components/ui/Avatar'
+import StatusBadge from '../../components/ui/StatusBadge'
 
 const RechercherMission = () => {
-  const { profile, signOut } = useAuth()
-  const navigate = useNavigate()
+  const { profile } = useAuth()
   const [missions, setMissions] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
@@ -19,8 +18,6 @@ const RechercherMission = () => {
     localisation: '',
     budget_min: '',
   })
-
-  const font = { fontFamily: "'DM Sans', sans-serif" }
 
   useEffect(() => {
     fetchCategories()
@@ -89,42 +86,35 @@ const RechercherMission = () => {
     fetchMissions()
   }
 
-  const handleSignOut = async () => {
-    await signOut()
-    navigate('/login')
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50" style={font}>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
 
       {notification && (
-        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-xl shadow-lg border max-w-sm ${
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-modal border max-w-sm ${
           notification.startsWith('error')
             ? 'bg-red-50 border-red-200 text-red-700'
             : 'bg-white border-gray-200 text-gray-900'
-        }`} style={font}>
+        }`}>
           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-            notification.startsWith('error') ? 'bg-red-500' : 'bg-green-500'
+            notification.startsWith('error') ? 'bg-red-500' : 'bg-emerald-500'
           }`} />
-          <p className="text-sm font-light flex-1">
+          <p className="text-sm font-medium flex-1">
             {notification.startsWith('error')
               ? notification.replace('error:', '')
               : notification.replace('success:', '')}
           </p>
           <button onClick={() => setNotification('')}
-            className="text-gray-400 hover:text-gray-600 text-xs flex-shrink-0">✕</button>
+            className="text-gray-400 hover:text-gray-600 text-xs flex-shrink-0 font-bold">X</button>
         </div>
       )}
 
       <Navbar />
 
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight"
-            style={{ letterSpacing: '-0.02em' }}>
-            Missions disponibles
-          </h1>
-          <p className="text-gray-400 text-sm font-light mt-1">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-10">
+
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Missions disponibles</h1>
+          <p className="text-gray-400 text-sm mt-1">
             {missions.length} mission{missions.length > 1 ? 's' : ''} disponible{missions.length > 1 ? 's' : ''}
           </p>
         </div>
@@ -135,8 +125,7 @@ const RechercherMission = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher une mission..."
-            style={font}
-            className="w-full px-5 py-4 pl-12 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all bg-white font-light"
+            className="w-full px-5 py-4 pl-12 bg-white border border-gray-200 rounded-2xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all shadow-card"
           />
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
             fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -149,8 +138,7 @@ const RechercherMission = () => {
           <select
             value={filtres.categorie_id}
             onChange={(e) => setFiltres({ ...filtres, categorie_id: e.target.value })}
-            style={font}
-            className="px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:border-black transition-all bg-white font-light"
+            className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:border-gray-900 transition-all shadow-card"
           >
             <option value="">Toutes categories</option>
             {categories.map(c => (
@@ -163,8 +151,7 @@ const RechercherMission = () => {
             value={filtres.localisation}
             onChange={(e) => setFiltres({ ...filtres, localisation: e.target.value })}
             placeholder="Localisation"
-            style={font}
-            className="px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-black transition-all bg-white font-light"
+            className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-gray-900 transition-all shadow-card"
           />
 
           <input
@@ -172,55 +159,56 @@ const RechercherMission = () => {
             value={filtres.budget_min}
             onChange={(e) => setFiltres({ ...filtres, budget_min: e.target.value })}
             placeholder="Budget min (FCFA)"
-            style={font}
-            className="px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-black transition-all bg-white font-light"
+            className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-gray-900 transition-all shadow-card"
           />
         </div>
 
         {loading ? (
-          <div className="text-center py-16">
-            <p className="text-gray-400 text-sm font-light">Chargement...</p>
+          <div className="text-center py-20">
+            <div className="w-8 h-8 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto" />
           </div>
         ) : missions.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-gray-900 font-medium text-sm mb-1">Aucune mission disponible</p>
-            <p className="text-gray-400 text-xs font-light">Revenez plus tard ou elargissez vos criteres</p>
+          <div className="text-center py-20">
+            <p className="text-gray-900 font-semibold text-sm mb-1">Aucune mission disponible</p>
+            <p className="text-gray-400 text-xs">Revenez plus tard ou elargissez vos criteres</p>
           </div>
         ) : (
           <div className="space-y-3">
             {missions.map((mission) => (
               <div key={mission.id}
-                className="bg-white rounded-xl border border-gray-100 p-5 hover:border-gray-300 transition-all">
+                className="bg-white rounded-2xl border border-gray-100 shadow-card hover:shadow-card-hover transition-all p-5">
+
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-medium text-gray-900 mb-1">{mission.titre}</h3>
-                    <p className="text-xs text-gray-400 font-light line-clamp-2">{mission.description}</p>
+                    <h3 className="text-sm font-bold text-gray-900 mb-1">{mission.titre}</h3>
+                    <p className="text-xs text-gray-400 line-clamp-2">{mission.description}</p>
                   </div>
-                  <span className="ml-4 text-sm font-semibold text-gray-900 whitespace-nowrap">
+                  <span className="ml-4 text-base font-bold text-gray-900 whitespace-nowrap">
                     {mission.budget?.toLocaleString()} FCFA
                   </span>
                 </div>
 
-                <div className="flex items-center gap-3 text-xs text-gray-400 font-light mb-4 flex-wrap">
+                <div className="flex items-center gap-3 text-xs mb-4 flex-wrap">
                   {mission.categorie?.nom && (
-                    <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full">
+                    <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-xl font-semibold">
                       {mission.categorie.nom}
                     </span>
                   )}
-                  {mission.localisation && <span>{mission.localisation}</span>}
-                  {mission.delai && <><span>•</span><span>{mission.delai}</span></>}
+                  {mission.localisation && <span className="text-gray-400">{mission.localisation}</span>}
+                  {mission.delai && <><span className="text-gray-300">·</span><span className="text-gray-400">{mission.delai}</span></>}
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Avatar url={mission.client?.avatar_url} nom={mission.client?.nom} size="xs" />
-                    <span className="text-xs text-gray-400 font-light">{mission.client?.nom}</span>
+                    <span className="text-xs text-gray-400 font-medium">{mission.client?.nom}</span>
+                    {mission.client?.localisation && (
+                      <span className="text-xs text-gray-300">· {mission.client.localisation}</span>
+                    )}
                   </div>
                   <button
                     onClick={() => handlePostuler(mission.id)}
-                    className="px-4 py-2 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-900 transition-all"
-                    style={{ letterSpacing: '0.04em' }}
-                  >
+                    className="px-5 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
                     Postuler
                   </button>
                 </div>
@@ -229,6 +217,8 @@ const RechercherMission = () => {
           </div>
         )}
       </main>
+
+      <Footer />
     </div>
   )
 }

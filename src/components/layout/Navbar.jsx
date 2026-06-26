@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import Avatar from '../ui/Avatar'
@@ -8,14 +8,21 @@ const Navbar = () => {
   const { profile, signOut } = useAuth()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 10)
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const clientLinks = [
     { to: '/client/dashboard', label: 'Dashboard' },
     { to: '/client/rechercher', label: 'Rechercher' },
-    { to: '/client/missions', label: 'Mes missions' },
+    { to: '/client/missions', label: 'Missions' },
     { to: '/client/suivi', label: 'Suivi' },
     { to: '/client/messages', label: 'Messages' },
-    { to: '/client/profil', label: 'Mon profil' },
+    { to: '/client/profil', label: 'Profil' },
   ]
 
   const prestataireLinks = [
@@ -23,7 +30,7 @@ const Navbar = () => {
     { to: '/prestataire/missions', label: 'Missions' },
     { to: '/prestataire/statistiques', label: 'Statistiques' },
     { to: '/prestataire/historique', label: 'Historique' },
-    { to: '/prestataire/profil', label: 'Mon profil' },
+    { to: '/prestataire/profil', label: 'Profil' },
     { to: '/prestataire/messages', label: 'Messages' },
   ]
 
@@ -39,34 +46,33 @@ const Navbar = () => {
 
   const isActive = (path) => location.pathname === path
 
-  const handleSignOut = async () => {
-    await signOut()
-    setMenuOpen(false)
-  }
+  const homeLink = profile?.role === 'client'
+    ? '/client/dashboard'
+    : profile?.role === 'prestataire'
+    ? '/prestataire/dashboard'
+    : '/admin/dashboard'
 
   return (
-    <header className="bg-white border-b border-gray-100 px-6 py-4 sticky top-0 z-40">
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
+    <header className={`bg-white sticky top-0 z-40 transition-all duration-200 ${
+      scrolled ? 'shadow-card border-b border-gray-100' : 'border-b border-gray-100'
+    }`}>
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
 
         {/* Logo */}
-        <Link to={
-          profile?.role === 'client' ? '/client/dashboard'
-          : profile?.role === 'prestataire' ? '/prestataire/dashboard'
-          : '/admin/dashboard'
-        }>
-          <img src={logo} alt="Alicia" className="w-14 h-14 object-contain" />
+        <Link to={homeLink} className="flex-shrink-0">
+          <img src={logo} alt="Alicia" className="h-10 w-auto object-contain" />
         </Link>
 
         {/* Nav desktop */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden lg:flex items-center gap-1">
           {links.map(link => (
             <Link
               key={link.to}
               to={link.to}
-              className={`px-3 py-2 rounded-lg text-sm transition-all ${
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150 ${
                 isActive(link.to)
-                  ? 'font-semibold text-black bg-gray-100'
-                  : 'text-gray-400 hover:text-black hover:bg-gray-50'
+                  ? 'bg-gray-900 text-white'
+                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
               {link.label}
@@ -76,17 +82,28 @@ const Navbar = () => {
 
         {/* Right */}
         <div className="flex items-center gap-3">
-          <Avatar url={profile?.avatar_url} nom={profile?.nom} size="sm" />
-          <button
-            onClick={handleSignOut}
-            className="text-xs text-gray-400 hover:text-black transition-colors font-light hidden md:block">
-            Deconnexion
-          </button>
+          <div className="hidden lg:flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-sm font-semibold text-gray-900 leading-tight">{profile?.nom}</p>
+              <p className="text-xs text-gray-400 capitalize">{profile?.role}</p>
+            </div>
+            <Avatar url={profile?.avatar_url} nom={profile?.nom} size="sm" />
+            <button
+              onClick={signOut}
+              className="ml-1 px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all">
+              Quitter
+            </button>
+          </div>
 
-          {/* Hamburger mobile */}
+          {/* Mobile avatar */}
+          <div className="lg:hidden">
+            <Avatar url={profile?.avatar_url} nom={profile?.nom} size="sm" />
+          </div>
+
+          {/* Hamburger */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-all"
+            className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-all"
           >
             {menuOpen ? (
               <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -103,27 +120,35 @@ const Navbar = () => {
 
       {/* Menu mobile */}
       {menuOpen && (
-        <div className="md:hidden mt-3 pb-3 border-t border-gray-100 pt-3 space-y-1">
+        <div className="lg:hidden border-t border-gray-100 bg-white px-4 py-3 space-y-1">
           {links.map(link => (
             <Link
               key={link.to}
               to={link.to}
               onClick={() => setMenuOpen(false)}
-              className={`block px-4 py-3 rounded-xl text-sm transition-all ${
+              className={`flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                 isActive(link.to)
-                  ? 'font-semibold text-black bg-gray-100'
-                  : 'text-gray-500 hover:text-black hover:bg-gray-50'
+                  ? 'bg-gray-900 text-white'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
               {link.label}
             </Link>
           ))}
-          <button
-            onClick={handleSignOut}
-            className="block w-full text-left px-4 py-3 text-sm text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all mt-2"
-          >
-            Deconnexion
-          </button>
+          <div className="pt-2 border-t border-gray-100 mt-2">
+            <div className="flex items-center gap-3 px-4 py-2 mb-2">
+              <Avatar url={profile?.avatar_url} nom={profile?.nom} size="sm" />
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{profile?.nom}</p>
+                <p className="text-xs text-gray-400 capitalize">{profile?.role}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => { signOut(); setMenuOpen(false) }}
+              className="w-full flex items-center px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 rounded-xl transition-all">
+              Se deconnecter
+            </button>
+          </div>
         </div>
       )}
     </header>
