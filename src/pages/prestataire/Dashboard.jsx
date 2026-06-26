@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import logo from '../../assets/logo.png'
 import Avatar from '../../components/ui/Avatar'
+import Navbar from '../../components/layout/Navbar'
 
 const PrestataireDashboard = () => {
   const { profile, signOut } = useAuth()
@@ -77,43 +78,7 @@ const PrestataireDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50" style={font}>
-      <header className="bg-white border-b border-gray-100 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center">
-            <img src={logo} alt="Alicia" className="w-16 h-16 object-contain" />
-          </div>
-          <nav className="hidden md:flex items-center gap-6">
-            <Link to="/prestataire/dashboard"
-              className="text-sm font-medium text-black border-b-2 border-black pb-0.5">
-              Dashboard
-            </Link>
-            <Link to="/prestataire/missions"
-              className="text-sm text-gray-400 hover:text-black transition-colors">
-              Missions disponibles
-            </Link>
-            <Link to="/prestataire/profil"
-              className="text-sm text-gray-400 hover:text-black transition-colors">
-              Mon profil
-            </Link>
-            <Link to="/prestataire/messages"
-              className="text-sm text-gray-400 hover:text-black transition-colors">
-              Messages
-            </Link>
-          </nav>
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden md:block">
-              <p className="text-sm font-medium text-gray-900">{profile?.nom}</p>
-              <p className="text-xs text-gray-400 font-light">Prestataire</p>
-            </div>
-            <Avatar url={profile?.avatar_url} nom={profile?.nom} size="sm" />
-            <button onClick={handleSignOut}
-              className="text-xs text-gray-400 hover:text-black transition-colors font-light">
-              Deconnexion
-            </button>
-          </div>
-        </div>
-      </header>
-
+      <Navbar />
       <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>

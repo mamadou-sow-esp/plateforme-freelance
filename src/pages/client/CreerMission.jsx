@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import logo from '../../assets/logo.png'
 import Avatar from '../../components/ui/Avatar'
+import Navbar from '../../components/layout/Navbar'
 
 const CreerMission = () => {
   const { profile, signOut } = useAuth()
@@ -98,42 +99,7 @@ const CreerMission = () => {
 
   return (
     <div className="min-h-screen bg-gray-50" style={font}>
-      <header className="bg-white border-b border-gray-100 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center">
-            <img src={logo} alt="Alicia" className="w-16 h-16 object-contain" />
-          </div>
-          <nav className="hidden md:flex items-center gap-6">
-            <Link to="/client/dashboard"
-              className="text-sm text-gray-400 hover:text-black transition-colors">
-              Dashboard
-            </Link>
-            <Link to="/client/rechercher"
-              className="text-sm text-gray-400 hover:text-black transition-colors">
-              Rechercher
-            </Link>
-            <Link to="/client/missions"
-              className="text-sm text-gray-400 hover:text-black transition-colors">
-              Mes missions
-            </Link>
-            <Link to="/client/messages"
-              className="text-sm text-gray-400 hover:text-black transition-colors">
-              Messages
-            </Link>
-          </nav>
-          <div className="flex items-center gap-4">
-            <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-medium">
-                {profile?.nom?.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <button onClick={handleSignOut}
-              className="text-xs text-gray-400 hover:text-black transition-colors font-light">
-              Deconnexion
-            </button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="max-w-2xl mx-auto px-6 py-8">
         <div className="mb-8">

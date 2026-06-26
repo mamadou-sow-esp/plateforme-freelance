@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import logo from '../../assets/logo.png'
 import Avatar from '../../components/ui/Avatar'
+import Navbar from '../../components/layout/Navbar'
 
 const ProfilPrestataire = () => {
   const { id } = useParams()
@@ -85,34 +86,7 @@ const ProfilPrestataire = () => {
     <div className="min-h-screen bg-gray-50" style={font}>
 
       {/* Header */}
-      <header className="bg-white border-b border-gray-100 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center">
-            <img src={logo} alt="Alicia" className="w-16 h-16 object-contain" />
-          </div>
-          <nav className="hidden md:flex items-center gap-6">
-            <Link to="/client/dashboard" className="text-sm text-gray-400 hover:text-black transition-colors">
-              Dashboard
-            </Link>
-            <Link to="/client/rechercher" className="text-sm text-gray-400 hover:text-black transition-colors">
-              Rechercher
-            </Link>
-            <Link to="/client/missions" className="text-sm text-gray-400 hover:text-black transition-colors">
-              Mes missions
-            </Link>
-            <Link to="/client/messages" className="text-sm text-gray-400 hover:text-black transition-colors">
-              Messages
-            </Link>
-          </nav>
-          <div className="flex items-center gap-4">
-            <Avatar url={profile?.avatar_url} nom={profile?.nom} size="sm" />
-            <button onClick={handleSignOut}
-              className="text-xs text-gray-400 hover:text-black transition-colors font-light">
-              Deconnexion
-            </button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="max-w-3xl mx-auto px-6 py-8">
 
@@ -195,11 +169,18 @@ const ProfilPrestataire = () => {
                 {profilData.prix_min?.toLocaleString()} — {profilData.prix_max?.toLocaleString()} FCFA
               </p>
             </div>
-            <button
-              onClick={() => navigate('/client/creer-mission?prestataire=' + id)}
-              className="px-5 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-900 transition-all">
-              Contacter
-            </button>
+            <div className="flex gap-2">
+              <Link
+                to="/client/messages"
+                className="px-4 py-2.5 border border-gray-200 text-gray-700 text-xs font-medium rounded-lg hover:border-black hover:text-black transition-all">
+                Envoyer un message
+              </Link>
+              <button
+                onClick={() => navigate('/client/creer-mission?prestataire=' + id)}
+                className="px-4 py-2.5 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-900 transition-all">
+                Assigner une mission
+              </button>
+            </div>
           </div>
 
           {/* Competences */}
@@ -208,7 +189,8 @@ const ProfilPrestataire = () => {
               <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">Competences</p>
               <div className="flex flex-wrap gap-2">
                 {profilData.competences.map((c, i) => (
-                  <span key={i} className="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full font-light">
+                  <span key={i}
+                    className="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full font-light">
                     {c}
                   </span>
                 ))}
