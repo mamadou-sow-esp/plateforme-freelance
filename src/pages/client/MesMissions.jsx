@@ -25,7 +25,11 @@ const MesMissions = () => {
   const fetchMissions = async () => {
     const { data } = await supabase
       .from('missions')
-      .select(`*, categorie:categories(nom), prestataire:profiles!missions_prestataire_id_fkey(id, nom, localisation, avatar_url)`)
+      .select(`
+        *,
+        categorie:categories(nom),
+        prestataire:profiles!missions_prestataire_id_fkey(id, nom, localisation, avatar_url)
+      `)
       .eq('client_id', profile?.id)
       .order('created_at', { ascending: false })
     setMissions(data || [])
@@ -33,22 +37,86 @@ const MesMissions = () => {
   }
 
   const fetchAvisDejaLaisses = async () => {
-    const { data } = await supabase.from('avis').select('mission_id').eq('auteur_id', profile?.id)
+    const { data } = await supabase
+      .from('avis').select('mission_id').eq('auteur_id', profile?.id)
     setAvisDejaLaisses((data || []).map(a => a.mission_id))
   }
 
-  const handleAccepter = async (id) => {
+  const recalculerStatsPrestataire = async (prestataireId) => {
+    const { count } = await supabase
+      .from('missions')
+      .select('*', { count: 'exact', head: true })
+      .eq('prestataire_id', prestataireId)
+      .eq('statut', 'valide')
+
+    const { data: tousAvis } = await supabase
+      .from('avis').select('note').eq('prestataire_id', prestataireId)
+
+    const moyenne = tousAvis && tousAvis.length > 0
+      ? tousAvis.reduce((acc, a) => acc + a.note, 0) / tousAvis.length
+      : 0
+
+    await supabase.from('prestataires').update({
+      nb_missions: count || 0,
+      note_moyenne: Math.round(moyenne * 10) / 10,
+    }).eq('id', prestataireId)
+  }
+
+  // Distingue mission publique (candidature) vs mission assignée directement
+  // On stocke si c'était une mission assignée via un champ ou on détecte :
+  // - Mission assignée directement : prestataire_id était déjà set à la création
+  // - Mission publique : prestataire_id a été set après (via candidature)
+  // Pour distinguer : on utilise le champ "assigne_directement" si il existe
+  // Sinon : si le prestataire n'a pas encore accepté ET c'est une mission assignée
+  // → on regarde si il y a eu une candidature (postule) ou une assignation directe
+  // La manière la plus simple : on ajoute un champ boolean "assigne_directement" en base
+
+  // En attendant le champ en base, on fait confiance au flux :
+  // Mission publique (prestataire_id = null à la création) → quand prestataire postule
+  //   → prestataire_id se set + statut reste en_attente → CLIENT doit accepter/refuser
+  // Mission assignée (prestataire_id set dès la création) → statut en_attente
+  //   → PRESTATAIRE doit accepter/refuser → CLIENT voit juste "En attente d'acceptation"
+
+  // Pour distinguer les deux cas on ajoute assigne_directement en base (voir SQL ci-dessous)
+  // En attendant : si la mission a prestataire_id ET que le prestataire n'a pas encore accepté
+  // on regarde le champ assigne_directement
+
+  const estAssigneeDirectement = (mission) => mission.assigne_directement === true
+
+  // Candidature reçue = mission publique avec prestataire qui a postulé
+  const candidatureRecue = (mission) =>
+    mission.statut === 'en_attente' &&
+    !!mission.prestataire_id &&
+    !estAssigneeDirectement(mission)
+
+  // Mission assignée en attente d'acceptation du prestataire
+  const enAttenteAcceptationPrestataire = (mission) =>
+    mission.statut === 'en_attente' &&
+    !!mission.prestataire_id &&
+    estAssigneeDirectement(mission)
+
+  const handleAccepterCandidature = async (id) => {
     await supabase.from('missions').update({ statut: 'en_cours' }).eq('id', id)
     fetchMissions()
   }
 
-  const handleRefuser = async (id) => {
-    await supabase.from('missions').update({ statut: 'en_attente', prestataire_id: null }).eq('id', id)
+  const handleRefuserCandidature = async (id) => {
+    await supabase.from('missions')
+      .update({ statut: 'en_attente', prestataire_id: null })
+      .eq('id', id)
     fetchMissions()
   }
 
-  const handleValider = async (id) => {
-    await supabase.from('missions').update({ statut: 'valide' }).eq('id', id)
+  const handleValider = async (missionId) => {
+    const { data: mission } = await supabase
+      .from('missions')
+      .update({ statut: 'valide' })
+      .eq('id', missionId)
+      .select('prestataire_id')
+      .single()
+    if (mission?.prestataire_id) {
+      await recalculerStatsPrestataire(mission.prestataire_id)
+    }
     fetchMissions()
   }
 
@@ -72,14 +140,7 @@ const MesMissions = () => {
       note: avisForm.note,
       commentaire: avisForm.commentaire,
     })
-    const { data: tousAvis } = await supabase.from('avis').select('note').eq('prestataire_id', avisModal.prestataire_id)
-    if (tousAvis) {
-      const moyenne = tousAvis.reduce((acc, a) => acc + a.note, 0) / tousAvis.length
-      await supabase.from('prestataires').update({
-        note_moyenne: Math.round(moyenne * 10) / 10,
-        nb_missions: tousAvis.length
-      }).eq('id', avisModal.prestataire_id)
-    }
+    await recalculerStatsPrestataire(avisModal.prestataire_id)
     setAvisModal(null)
     setAvisForm({ note: 5, commentaire: '' })
     setSavingAvis(false)
@@ -96,7 +157,9 @@ const MesMissions = () => {
     { key: 'annule', label: 'Annulées' },
   ]
 
-  const missionsFiltrees = filtre === 'tous' ? missions : missions.filter(m => m.statut === filtre)
+  const missionsFiltrees = filtre === 'tous'
+    ? missions
+    : missions.filter(m => m.statut === filtre)
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -165,7 +228,9 @@ const MesMissions = () => {
           {filtres.map(f => (
             <button key={f.key} onClick={() => setFiltre(f.key)}
               className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                filtre === f.key ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-400 shadow-card'
+                filtre === f.key
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-400 shadow-card'
               }`}>
               {f.label}
             </button>
@@ -189,14 +254,19 @@ const MesMissions = () => {
               <div key={mission.id}
                 className="bg-white rounded-2xl border border-gray-100 shadow-card hover:shadow-card-hover transition-all p-4 md:p-5">
 
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between mb-2">
                   <div className="flex-1 min-w-0 mr-3">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="text-sm font-bold text-gray-900 truncate">{mission.titre}</h3>
                       <StatusBadge statut={mission.statut} />
-                      {mission.statut === 'en_attente' && mission.prestataire_id && (
+                      {candidatureRecue(mission) && (
                         <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                           Candidature reçue
+                        </span>
+                      )}
+                      {enAttenteAcceptationPrestataire(mission) && (
+                        <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                          En attente du prestataire
                         </span>
                       )}
                     </div>
@@ -219,9 +289,6 @@ const MesMissions = () => {
                       <p className="text-xs font-semibold text-gray-900 truncate">{mission.prestataire.nom}</p>
                       <p className="text-xs text-gray-400 truncate">{mission.prestataire.localisation}</p>
                     </div>
-                    {mission.statut === 'en_attente' && (
-                      <span className="text-xs text-amber-600 font-medium hidden sm:block">En attente de décision</span>
-                    )}
                     <Link to={'/client/prestataire/' + mission.prestataire.id}
                       className="text-xs text-gray-900 font-semibold hover:underline whitespace-nowrap flex-shrink-0">
                       Voir profil
@@ -230,24 +297,44 @@ const MesMissions = () => {
                 )}
 
                 <div className="flex gap-2 flex-wrap">
-                  {mission.statut === 'en_attente' && mission.prestataire_id && (
+
+                  {/* Mission publique sans prestataire → annuler */}
+                  {mission.statut === 'en_attente' && !mission.prestataire_id && (
+                    <button onClick={() => handleAnnuler(mission.id)}
+                      className="px-3 py-1.5 border border-gray-200 text-gray-500 text-xs font-semibold rounded-xl hover:border-red-300 hover:text-red-500 transition-all">
+                      Annuler la mission
+                    </button>
+                  )}
+
+                  {/* Mission publique avec candidature → CLIENT accepte ou refuse */}
+                  {candidatureRecue(mission) && (
                     <>
-                      <button onClick={() => handleAccepter(mission.id)}
+                      <button onClick={() => handleAccepterCandidature(mission.id)}
                         className="px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
-                        Accepter
+                        Accepter la candidature
                       </button>
-                      <button onClick={() => handleRefuser(mission.id)}
+                      <button onClick={() => handleRefuserCandidature(mission.id)}
                         className="px-3 py-1.5 border border-gray-200 text-gray-500 text-xs font-semibold rounded-xl hover:border-red-300 hover:text-red-500 transition-all">
                         Refuser
                       </button>
                     </>
                   )}
-                  {mission.statut === 'en_attente' && !mission.prestataire_id && (
-                    <button onClick={() => handleAnnuler(mission.id)}
-                      className="px-3 py-1.5 border border-gray-200 text-gray-500 text-xs font-semibold rounded-xl hover:border-red-300 hover:text-red-500 transition-all">
-                      Annuler
-                    </button>
+
+                  {/* Mission assignée directement → CLIENT attend que le prestataire accepte */}
+                  {enAttenteAcceptationPrestataire(mission) && (
+                    <span className="text-xs text-blue-600 font-medium py-1.5 italic">
+                      Le prestataire doit accepter la mission...
+                    </span>
                   )}
+
+                  {/* Mission en cours → le prestataire doit livrer */}
+                  {mission.statut === 'en_cours' && (
+                    <span className="text-xs text-gray-400 py-1.5 italic">
+                      En attente de livraison par le prestataire...
+                    </span>
+                  )}
+
+                  {/* Mission livrée → valider ou contester */}
                   {mission.statut === 'livre' && (
                     <>
                       <button onClick={() => handleValider(mission.id)}
@@ -260,6 +347,8 @@ const MesMissions = () => {
                       </button>
                     </>
                   )}
+
+                  {/* Mission validée → laisser un avis */}
                   {mission.statut === 'valide' && mission.prestataire_id && !avisDejaLaisses.includes(mission.id) && (
                     <button onClick={() => setAvisModal(mission)}
                       className="px-3 py-1.5 border border-amber-300 text-amber-700 text-xs font-semibold rounded-xl hover:bg-amber-50 transition-all">
@@ -267,7 +356,7 @@ const MesMissions = () => {
                     </button>
                   )}
                   {mission.statut === 'valide' && avisDejaLaisses.includes(mission.id) && (
-                    <span className="text-xs text-gray-400 py-1.5">Avis publié</span>
+                    <span className="text-xs text-emerald-600 font-medium py-1.5">Avis publié ✓</span>
                   )}
                 </div>
               </div>

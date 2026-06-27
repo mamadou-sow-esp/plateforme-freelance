@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import Navbar from '../../components/layout/Navbar'
@@ -11,6 +11,7 @@ import VerifiedBadge from '../../components/ui/VerifiedBadge'
 
 const PrestataireDashboard = () => {
   const { profile } = useAuth()
+  const navigate = useNavigate()
   const [missions, setMissions] = useState([])
   const [profil, setProfil] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -23,7 +24,8 @@ const PrestataireDashboard = () => {
       .select('*, categorie:categories(nom), client:profiles!missions_client_id_fkey(nom, avatar_url)')
       .eq('prestataire_id', profile?.id)
       .order('created_at', { ascending: false })
-    const { data: profilData } = await supabase.from('prestataires').select('*').eq('id', profile?.id).single()
+    const { data: profilData } = await supabase
+      .from('prestataires').select('*').eq('id', profile?.id).single()
     setMissions(missionsData || [])
     setProfil(profilData)
     setLoading(false)
@@ -34,6 +36,16 @@ const PrestataireDashboard = () => {
     fetchData()
   }
 
+  const handleAccepterMission = async (missionId) => {
+    await supabase.from('missions').update({ statut: 'en_cours' }).eq('id', missionId)
+    fetchData()
+  }
+
+  const handleRefuserMission = async (missionId) => {
+    await supabase.from('missions').update({ statut: 'en_attente', prestataire_id: null }).eq('id', missionId)
+    fetchData()
+  }
+
   const stats = {
     total: missions.length,
     en_cours: missions.filter(m => m.statut === 'en_cours').length,
@@ -41,6 +53,9 @@ const PrestataireDashboard = () => {
     en_attente: missions.filter(m => m.statut === 'en_attente').length,
   }
   const totalGagne = missions.filter(m => m.statut === 'valide').reduce((acc, m) => acc + (m.budget || 0), 0)
+
+  // Missions assignées directement (en attente d'acceptation du prestataire)
+  const missionsAssignees = missions.filter(m => m.statut === 'en_attente' && m.prestataire_id === profile?.id)
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -67,7 +82,7 @@ const PrestataireDashboard = () => {
         </div>
 
         {profil && !profil.verifie_cni && (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-6">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,7 +106,51 @@ const PrestataireDashboard = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        {/* Missions assignées en attente d'acceptation */}
+        {missionsAssignees.length > 0 && (
+          <div className="mb-6">
+            <h2 className="font-bold text-gray-900 text-sm mb-3 flex items-center gap-2">
+              Missions qui m'ont été assignées
+              <span className="w-5 h-5 bg-amber-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                {missionsAssignees.length}
+              </span>
+            </h2>
+            <div className="space-y-3">
+              {missionsAssignees.map(mission => (
+                <div key={mission.id}
+                  className="bg-white rounded-2xl border border-amber-200 shadow-card p-4 md:p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0 mr-3">
+                      <h3 className="text-sm font-bold text-gray-900 truncate">{mission.titre}</h3>
+                      <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{mission.description}</p>
+                    </div>
+                    <span className="text-base font-bold text-gray-900 whitespace-nowrap flex-shrink-0">
+                      {mission.budget?.toLocaleString()} FCFA
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Avatar url={mission.client?.avatar_url} nom={mission.client?.nom} size="xs" />
+                      <span className="text-xs text-gray-400">{mission.client?.nom}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleRefuserMission(mission.id)}
+                        className="px-3 py-1.5 border border-gray-200 text-gray-500 text-xs font-semibold rounded-xl hover:border-red-300 hover:text-red-500 transition-all">
+                        Refuser
+                      </button>
+                      <button onClick={() => handleAccepterMission(mission.id)}
+                        className="px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
+                        Accepter
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
             { label: 'Total gagné', value: totalGagne.toLocaleString() + ' FCFA', color: 'text-emerald-600' },
             { label: 'Total missions', value: stats.total, color: 'text-gray-900' },
@@ -110,7 +169,8 @@ const PrestataireDashboard = () => {
           <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <h2 className="font-bold text-gray-900 text-sm">Mes missions</h2>
-              <Link to="/prestataire/historique" className="text-xs font-medium text-gray-400 hover:text-gray-900 transition-colors">
+              <Link to="/prestataire/historique"
+                className="text-xs font-medium text-gray-400 hover:text-gray-900 transition-colors">
                 Historique complet
               </Link>
             </div>
@@ -119,9 +179,9 @@ const PrestataireDashboard = () => {
               <div className="py-12 flex items-center justify-center">
                 <div className="w-8 h-8 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
               </div>
-            ) : missions.length === 0 ? (
+            ) : missions.filter(m => m.statut !== 'en_attente').length === 0 ? (
               <div className="px-5 py-12 text-center">
-                <p className="text-gray-900 font-semibold text-sm mb-1">Aucune mission assignée</p>
+                <p className="text-gray-900 font-semibold text-sm mb-1">Aucune mission en cours</p>
                 <p className="text-gray-400 text-xs mb-4">Parcourez les missions disponibles</p>
                 <Link to="/prestataire/missions"
                   className="inline-flex px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
@@ -130,8 +190,10 @@ const PrestataireDashboard = () => {
               </div>
             ) : (
               <div className="divide-y divide-gray-50">
-                {missions.slice(0, 6).map((mission) => (
-                  <div key={mission.id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
+                {missions.filter(m => m.statut !== 'en_attente').slice(0, 6).map((mission) => (
+                  <div key={mission.id}
+                    className="px-5 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => navigate('/prestataire/historique')}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex-1 min-w-0 mr-3">
                         <p className="text-sm font-semibold text-gray-900 truncate">{mission.titre}</p>
@@ -150,7 +212,8 @@ const PrestataireDashboard = () => {
                       </div>
                     </div>
                     {mission.statut === 'en_cours' && (
-                      <button onClick={() => handleLivrer(mission.id)}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleLivrer(mission.id) }}
                         className="mt-1 px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-lg hover:bg-black transition-all">
                         Marquer comme livré
                       </button>

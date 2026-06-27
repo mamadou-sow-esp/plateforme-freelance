@@ -20,20 +20,34 @@ const ProfilPrestataire = () => {
   useEffect(() => { fetchData() }, [id])
 
   const fetchData = async () => {
-    const { data: profileData } = await supabase
-      .from('profiles').select('*').eq('id', id).single()
-    const { data: prestData } = await supabase
-      .from('prestataires').select('*').eq('id', id).single()
+    const { data: profileData } = await supabase.from('profiles').select('*').eq('id', id).single()
+    const { data: prestData } = await supabase.from('prestataires').select('*').eq('id', id).single()
     const { data: avisData } = await supabase
       .from('avis')
       .select('*, auteur:profiles!avis_auteur_id_fkey(nom, avatar_url)')
       .eq('prestataire_id', id)
       .order('created_at', { ascending: false })
-
     setPrestataire(profileData)
     setProfilData(prestData)
     setAvis(avisData || [])
     setLoading(false)
+  }
+
+  const handleEnvoyerMessage = async () => {
+    const { data } = await supabase
+      .from('missions')
+      .select('id')
+      .eq('client_id', profile?.id)
+      .eq('prestataire_id', id)
+      .not('prestataire_id', 'is', null)
+      .limit(1)
+      .maybeSingle()
+
+    if (data) {
+      navigate('/client/messages/' + data.id)
+    } else {
+      navigate('/client/creer-mission?prestataire=' + id)
+    }
   }
 
   if (loading) {
@@ -55,9 +69,7 @@ const ProfilPrestataire = () => {
         <div className="flex-1 flex items-center justify-center text-center">
           <div>
             <p className="text-gray-900 font-semibold text-sm mb-2">Prestataire introuvable</p>
-            <Link to="/client/rechercher" className="text-xs text-gray-400 hover:text-gray-900">
-              Retour a la recherche
-            </Link>
+            <Link to="/client/rechercher" className="text-xs text-gray-400 hover:text-gray-900">Retour à la recherche</Link>
           </div>
         </div>
         <Footer />
@@ -70,7 +82,6 @@ const ProfilPrestataire = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
-
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 md:px-6 py-8">
 
         <button onClick={() => navigate(-1)}
@@ -83,7 +94,6 @@ const ProfilPrestataire = () => {
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6 mb-4">
 
-          {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
             <div className="flex items-center gap-4">
               <Avatar url={prestataire.avatar_url} nom={prestataire.nom} size="lg" />
@@ -112,15 +122,13 @@ const ProfilPrestataire = () => {
             </div>
           </div>
 
-          {/* Bio */}
           {prestataire.bio && (
             <div className="mb-6">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">A propos</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">À propos</p>
               <p className="text-sm text-gray-700 leading-relaxed">{prestataire.bio}</p>
             </div>
           )}
 
-          {/* Stats */}
           <div className="grid grid-cols-3 gap-3 p-4 bg-gray-50 rounded-xl mb-6">
             <div className="text-center">
               <p className="text-xl md:text-2xl font-bold text-gray-900">{profilData.nb_missions}</p>
@@ -138,28 +146,28 @@ const ProfilPrestataire = () => {
             </div>
           </div>
 
-          {/* Prix + CTA */}
           <div className="p-4 border border-gray-100 rounded-xl mb-6">
             <p className="text-xs text-gray-400 mb-1">Fourchette de prix</p>
             <p className="text-base font-bold text-gray-900 mb-4">
               {profilData.prix_min?.toLocaleString()} — {profilData.prix_max?.toLocaleString()} FCFA
             </p>
             <div className="flex gap-2 flex-wrap">
-              <Link to="/client/messages"
+              <button
+                onClick={handleEnvoyerMessage}
                 className="flex-1 py-2.5 text-center border border-gray-200 text-gray-700 text-xs font-semibold rounded-xl hover:border-gray-900 hover:text-gray-900 transition-all">
                 Envoyer un message
-              </Link>
-              <button onClick={() => navigate('/client/creer-mission?prestataire=' + id)}
+              </button>
+              <button
+                onClick={() => navigate('/client/creer-mission?prestataire=' + id)}
                 className="flex-1 py-2.5 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
                 Assigner une mission
               </button>
             </div>
           </div>
 
-          {/* Competences */}
           {profilData.competences && profilData.competences.length > 0 && (
             <div className="mb-6">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Competences</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Compétences</p>
               <div className="flex flex-wrap gap-2">
                 {profilData.competences.map((c, i) => (
                   <span key={i} className="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 rounded-xl font-medium">{c}</span>
@@ -168,32 +176,31 @@ const ProfilPrestataire = () => {
             </div>
           )}
 
-          {/* Liens */}
           {hasLinks && (
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Liens</p>
               <div className="flex flex-wrap gap-2">
                 {profilData.github_url && (
                   <a href={'https://github.com/' + profilData.github_url} target="_blank" rel="noreferrer"
-                    className="px-3 py-2 border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold hover:border-gray-900 hover:text-gray-900 transition-all">
+                    className="px-3 py-2 border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold hover:border-gray-900 transition-all">
                     GitHub
                   </a>
                 )}
                 {profilData.portfolio_url && (
                   <a href={profilData.portfolio_url} target="_blank" rel="noreferrer"
-                    className="px-3 py-2 border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold hover:border-gray-900 hover:text-gray-900 transition-all">
+                    className="px-3 py-2 border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold hover:border-gray-900 transition-all">
                     Portfolio
                   </a>
                 )}
                 {profilData.linkedin_url && (
                   <a href={'https://linkedin.com/in/' + profilData.linkedin_url} target="_blank" rel="noreferrer"
-                    className="px-3 py-2 border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold hover:border-gray-900 hover:text-gray-900 transition-all">
+                    className="px-3 py-2 border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold hover:border-gray-900 transition-all">
                     LinkedIn
                   </a>
                 )}
                 {profilData.cv_url && (
                   <a href={profilData.cv_url} target="_blank" rel="noreferrer"
-                    className="px-3 py-2 border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold hover:border-gray-900 hover:text-gray-900 transition-all">
+                    className="px-3 py-2 border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold hover:border-gray-900 transition-all">
                     Voir CV
                   </a>
                 )}
@@ -202,12 +209,11 @@ const ProfilPrestataire = () => {
           )}
         </div>
 
-        {/* Avis */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6">
           <h2 className="font-bold text-gray-900 text-base mb-5">Avis clients ({avis.length})</h2>
           {avis.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-400 text-sm">Aucun avis pour l instant</p>
+              <p className="text-gray-400 text-sm">Aucun avis pour l'instant</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -220,21 +226,16 @@ const ProfilPrestataire = () => {
                       <StarRating note={a.note} size="sm" />
                     </div>
                     <span className="text-xs text-gray-400 flex-shrink-0">
-                      {new Date(a.created_at).toLocaleDateString('fr-FR', {
-                        day: 'numeric', month: 'short', year: 'numeric'
-                      })}
+                      {new Date(a.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </span>
                   </div>
-                  {a.commentaire && (
-                    <p className="text-sm text-gray-600 leading-relaxed">{a.commentaire}</p>
-                  )}
+                  {a.commentaire && <p className="text-sm text-gray-600 leading-relaxed">{a.commentaire}</p>}
                 </div>
               ))}
             </div>
           )}
         </div>
       </main>
-
       <Footer />
     </div>
   )

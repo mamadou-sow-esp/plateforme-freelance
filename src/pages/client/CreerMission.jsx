@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import Navbar from '../../components/layout/Navbar'
@@ -39,9 +39,16 @@ const CreerMission = () => {
     }
     try {
       const { error: missionError } = await supabase.from('missions').insert({
-        titre: form.titre, description: form.description, categorie_id: form.categorie_id,
-        budget: parseFloat(form.budget), localisation: form.localisation, delai: form.delai,
-        client_id: profile?.id, prestataire_id: prestataire_id || null, statut: 'en_attente',
+        titre: form.titre,
+        description: form.description,
+        categorie_id: form.categorie_id,
+        budget: parseFloat(form.budget),
+        localisation: form.localisation,
+        delai: form.delai,
+        client_id: profile?.id,
+        prestataire_id: prestataire_id || null,
+        statut: 'en_attente',
+        assigne_directement: !!prestataire_id,
       })
       if (missionError) throw missionError
       setSuccess(true)
@@ -64,7 +71,9 @@ const CreerMission = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">Mission publiée !</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">
+              {prestataire_id ? 'Mission assignée !' : 'Mission publiée !'}
+            </h2>
             <p className="text-gray-400 text-sm">Redirection en cours...</p>
           </div>
         </div>
@@ -85,8 +94,14 @@ const CreerMission = () => {
             </svg>
             Retour
           </button>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Créer une mission</h1>
-          <p className="text-gray-400 text-sm mt-1">Décrivez votre besoin pour trouver le bon prestataire</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">
+            {prestataire_id ? 'Assigner une mission' : 'Créer une mission'}
+          </h1>
+          <p className="text-gray-400 text-sm mt-1">
+            {prestataire_id
+              ? 'Décrivez la mission à assigner à ce prestataire'
+              : 'Décrivez votre besoin pour trouver le bon prestataire'}
+          </p>
         </div>
 
         {error && (
@@ -96,6 +111,7 @@ const CreerMission = () => {
         )}
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6 space-y-5">
+
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
               Titre de la mission *
@@ -125,7 +141,8 @@ const CreerMission = () => {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Budget (FCFA) *</label>
-              <input type="number" name="budget" value={form.budget} onChange={handleChange} placeholder="50000"
+              <input type="number" name="budget" value={form.budget} onChange={handleChange}
+                placeholder="50000"
                 className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
             </div>
           </div>
@@ -133,12 +150,14 @@ const CreerMission = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Localisation</label>
-              <input type="text" name="localisation" value={form.localisation} onChange={handleChange} placeholder="Dakar, Plateau"
+              <input type="text" name="localisation" value={form.localisation} onChange={handleChange}
+                placeholder="Dakar, Plateau"
                 className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Délai souhaité</label>
-              <input type="text" name="delai" value={form.delai} onChange={handleChange} placeholder="Ex: 1 semaine"
+              <input type="text" name="delai" value={form.delai} onChange={handleChange}
+                placeholder="Ex: 1 semaine"
                 className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
             </div>
           </div>
@@ -146,7 +165,7 @@ const CreerMission = () => {
           {prestataire_id && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
               <p className="text-xs text-blue-700 font-medium">
-                Cette mission sera assignée directement au prestataire sélectionné
+                Cette mission sera assignée directement au prestataire sélectionné. Il devra l'accepter avant qu'elle commence.
               </p>
             </div>
           )}
@@ -158,7 +177,9 @@ const CreerMission = () => {
             </button>
             <button type="submit" disabled={loading}
               className="flex-1 py-3.5 bg-gray-900 text-white font-semibold text-sm rounded-xl hover:bg-black transition-all disabled:opacity-40">
-              {loading ? 'Publication...' : 'Publier la mission'}
+              {loading
+                ? (prestataire_id ? 'Assignation...' : 'Publication...')
+                : (prestataire_id ? 'Assigner au prestataire' : 'Publier la mission')}
             </button>
           </div>
         </form>

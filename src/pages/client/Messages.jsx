@@ -8,68 +8,128 @@ import Avatar from '../../components/ui/Avatar'
 const ClientMessages = () => {
   const { profile } = useAuth()
   const { missionId } = useParams()
-  const [missions, setMissions] = useState([])
-  const [selectedMission, setSelectedMission] = useState(null)
+  const [conversations, setConversations] = useState([])
+  const [selectedConv, setSelectedConv] = useState(null)
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const bottomRef = useRef(null)
+  const channelsRef = useRef([])
 
-  useEffect(() => { fetchMissions() }, [])
+  useEffect(() => { fetchConversations() }, [])
+
   useEffect(() => {
-    if (selectedMission) {
-      fetchMessages(selectedMission.id)
-      const unsub = subscribeToMessages(selectedMission.id)
-      return unsub
+    if (selectedConv) {
+      fetchMessages(selectedConv)
+      subscribeToMessages(selectedConv)
     }
-  }, [selectedMission])
+    return () => {
+      channelsRef.current.forEach(c => supabase.removeChannel(c))
+      channelsRef.current = []
+    }
+  }, [selectedConv])
+
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
-  const fetchMissions = async () => {
+  const fetchConversations = async () => {
     if (!profile?.id) return
+
     const { data } = await supabase
       .from('missions')
       .select('*, prestataire:profiles!missions_prestataire_id_fkey(id, nom, avatar_url)')
       .eq('client_id', profile.id)
       .not('prestataire_id', 'is', null)
       .order('updated_at', { ascending: false })
-    const result = data || []
-    setMissions(result)
+
+    // Déduplique par prestataire — une seule conversation par personne
+    const seen = new Set()
+    const deduplicated = (data || []).filter(m => {
+      if (seen.has(m.prestataire_id)) return false
+      seen.add(m.prestataire_id)
+      return true
+    })
+
+    setConversations(deduplicated)
+
     if (missionId) {
-      const mission = result.find(m => m.id === missionId)
-      if (mission) { setSelectedMission(mission); setShowChat(true) }
-    } else if (result.length > 0) { setSelectedMission(result[0]) }
+      const mission = (data || []).find(m => m.id === missionId)
+      if (mission) {
+        // Trouve la conv correspondante pour ce prestataire
+        const conv = deduplicated.find(c => c.prestataire_id === mission.prestataire_id)
+        if (conv) { setSelectedConv(conv); setShowChat(true) }
+      }
+    } else if (deduplicated.length > 0) {
+      setSelectedConv(deduplicated[0])
+    }
     setLoading(false)
   }
 
-  const fetchMessages = async (mId) => {
+  const fetchMessages = async (conv) => {
+    if (!conv) return
+
+    // Récupère toutes les missions entre ce client et ce prestataire
+    const { data: toutesLesMissions } = await supabase
+      .from('missions')
+      .select('id')
+      .eq('client_id', profile?.id)
+      .eq('prestataire_id', conv.prestataire_id)
+
+    const missionIds = (toutesLesMissions || []).map(m => m.id)
+    if (missionIds.length === 0) { setMessages([]); return }
+
     const { data } = await supabase
       .from('messages')
       .select('*, expediteur:profiles!messages_expediteur_id_fkey(nom, avatar_url)')
-      .eq('mission_id', mId).order('created_at', { ascending: true })
+      .in('mission_id', missionIds)
+      .order('created_at', { ascending: true })
+
     setMessages(data || [])
   }
 
-  const subscribeToMessages = (mId) => {
-    const channel = supabase.channel('messages_client_' + mId)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'mission_id=eq.' + mId },
-        () => { fetchMessages(mId) }).subscribe()
-    return () => supabase.removeChannel(channel)
+  const subscribeToMessages = async (conv) => {
+    if (!conv) return
+
+    channelsRef.current.forEach(c => supabase.removeChannel(c))
+    channelsRef.current = []
+
+    const { data: toutesLesMissions } = await supabase
+      .from('missions')
+      .select('id')
+      .eq('client_id', profile?.id)
+      .eq('prestataire_id', conv.prestataire_id)
+
+    const channels = (toutesLesMissions || []).map(m =>
+      supabase.channel('msg_client_' + m.id)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'messages',
+          filter: 'mission_id=eq.' + m.id
+        }, () => fetchMessages(conv))
+        .subscribe()
+    )
+    channelsRef.current = channels
   }
 
   const handleSend = async () => {
-    if (!newMessage.trim() || !selectedMission) return
+    if (!newMessage.trim() || !selectedConv) return
     setSending(true)
     await supabase.from('messages').insert({
-      mission_id: selectedMission.id, expediteur_id: profile?.id, contenu: newMessage.trim(),
+      mission_id: selectedConv.id,
+      expediteur_id: profile?.id,
+      contenu: newMessage.trim(),
     })
-    setNewMessage(''); setSending(false)
+    setNewMessage('')
+    setSending(false)
   }
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
+  }
+
+  const handleSelectConv = (conv) => {
+    setSelectedConv(conv)
+    setShowChat(true)
   }
 
   const formatTime = (date) => new Date(date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
@@ -80,6 +140,7 @@ const ClientMessages = () => {
       <Navbar />
       <div className="flex flex-1 overflow-hidden">
 
+        {/* Liste conversations */}
         <div className={`${showChat ? 'hidden md:flex' : 'flex'} w-full md:w-80 flex-shrink-0 bg-white border-r border-gray-100 flex-col`}>
           <div className="px-5 py-4 border-b border-gray-100">
             <h2 className="font-bold text-gray-900 text-sm">Conversations</h2>
@@ -88,23 +149,23 @@ const ClientMessages = () => {
             <div className="flex-1 flex items-center justify-center">
               <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
             </div>
-          ) : missions.length === 0 ? (
+          ) : conversations.length === 0 ? (
             <div className="flex-1 flex items-center justify-center p-6 text-center">
               <p className="text-gray-400 text-xs">Aucune conversation pour l'instant</p>
             </div>
           ) : (
             <div className="overflow-y-auto flex-1">
-              {missions.map(mission => (
-                <button key={mission.id}
-                  onClick={() => { setSelectedMission(mission); setShowChat(true) }}
+              {conversations.map(conv => (
+                <button key={conv.prestataire_id}
+                  onClick={() => handleSelectConv(conv)}
                   className={`w-full px-5 py-4 text-left border-b border-gray-50 transition-all ${
-                    selectedMission?.id === mission.id ? 'bg-gray-50 border-l-2 border-l-gray-900' : 'hover:bg-gray-50'
+                    selectedConv?.prestataire_id === conv.prestataire_id ? 'bg-gray-50 border-l-2 border-l-gray-900' : 'hover:bg-gray-50'
                   }`}>
                   <div className="flex items-center gap-3">
-                    <Avatar url={mission.prestataire?.avatar_url} nom={mission.prestataire?.nom} size="md" />
+                    <Avatar url={conv.prestataire?.avatar_url} nom={conv.prestataire?.nom} size="md" />
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{mission.prestataire?.nom}</p>
-                      <p className="text-xs text-gray-400 truncate mt-0.5">{mission.titre}</p>
+                      <p className="text-sm font-semibold text-gray-900 truncate">{conv.prestataire?.nom}</p>
+                      <p className="text-xs text-gray-400 truncate mt-0.5">Prestataire</p>
                     </div>
                   </div>
                 </button>
@@ -113,8 +174,9 @@ const ClientMessages = () => {
           )}
         </div>
 
+        {/* Zone chat */}
         <div className={`${!showChat ? 'hidden md:flex' : 'flex'} flex-1 flex-col bg-white`}>
-          {!selectedMission ? (
+          {!selectedConv ? (
             <div className="flex-1 flex items-center justify-center">
               <p className="text-gray-400 text-sm">Sélectionnez une conversation</p>
             </div>
@@ -126,10 +188,10 @@ const ClientMessages = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
-                <Avatar url={selectedMission.prestataire?.avatar_url} nom={selectedMission.prestataire?.nom} size="sm" />
+                <Avatar url={selectedConv.prestataire?.avatar_url} nom={selectedConv.prestataire?.nom} size="sm" />
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-gray-900 truncate">{selectedMission.prestataire?.nom}</p>
-                  <p className="text-xs text-gray-400 truncate">{selectedMission.titre}</p>
+                  <p className="text-sm font-bold text-gray-900 truncate">{selectedConv.prestataire?.nom}</p>
+                  <p className="text-xs text-gray-400">Prestataire</p>
                 </div>
               </div>
 

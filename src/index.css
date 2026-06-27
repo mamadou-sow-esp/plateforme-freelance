@@ -46,3 +46,8 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #e8e8e8; border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: #d1d1d1; }
+
+/* Empêche le zoom automatique sur les inputs iOS/Android */
+input, textarea, select {
+  font-size: 16px !important;
+}

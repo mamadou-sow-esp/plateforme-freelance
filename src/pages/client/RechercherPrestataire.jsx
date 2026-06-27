@@ -1,12 +1,24 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../context/AuthContext'
+import useGeolocation from '../../hooks/useGeolocation'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import Avatar from '../../components/ui/Avatar'
 import StarRating from '../../components/ui/StarRating'
 import VerifiedBadge from '../../components/ui/VerifiedBadge'
+
+const getDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLon = ((lon2 - lon1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2)
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
 
 const RechercherPrestataire = () => {
   const navigate = useNavigate()
@@ -14,10 +26,21 @@ const RechercherPrestataire = () => {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [filtres, setFiltres] = useState({ categorie: '', localisation: '', prix_max: '', disponible: false })
+  const [filtres, setFiltres] = useState({
+    categorie: '', localisation: '', prix_max: '',
+    disponible: false, certifie: false, proximite: false,
+  })
+
+  const geo = useGeolocation(null, false)
 
   useEffect(() => { fetchCategories(); fetchPrestataires() }, [])
-  useEffect(() => { fetchPrestataires() }, [filtres, search])
+  useEffect(() => { fetchPrestataires() }, [filtres, search, geo.location])
+
+  useEffect(() => {
+    if (filtres.proximite && !geo.location && !geo.loading) {
+      geo.startWatching()
+    }
+  }, [filtres.proximite])
 
   const fetchCategories = async () => {
     const { data } = await supabase.from('categories').select('*')
@@ -26,11 +49,15 @@ const RechercherPrestataire = () => {
 
   const fetchPrestataires = async () => {
     setLoading(true)
-    let query = supabase.from('prestataires').select('*, profile:profiles(id, nom, localisation, avatar_url, bio)')
+    let query = supabase
+      .from('prestataires')
+      .select('*, profile:profiles(id, nom, localisation, avatar_url, bio, latitude, longitude)')
     if (filtres.disponible) query = query.eq('disponible', true)
+    if (filtres.certifie) query = query.eq('verifie_cni', true)
     if (filtres.prix_max) query = query.lte('prix_max', filtres.prix_max)
     const { data } = await query
     let result = data || []
+
     if (search) {
       result = result.filter(p =>
         p.metier?.toLowerCase().includes(search.toLowerCase()) ||
@@ -43,8 +70,37 @@ const RechercherPrestataire = () => {
         p.profile?.localisation?.toLowerCase().includes(filtres.localisation.toLowerCase())
       )
     }
+
+    result = result.map(p => ({
+      ...p,
+      distance: geo.location && p.profile?.latitude && p.profile?.longitude
+        ? getDistance(geo.location.lat, geo.location.lon, p.profile.latitude, p.profile.longitude)
+        : null
+    }))
+
+    if (filtres.proximite && geo.location) {
+      result.sort((a, b) => {
+        if (a.distance !== null && b.distance !== null) return a.distance - b.distance
+        if (a.distance !== null) return -1
+        if (b.distance !== null) return 1
+        return 0
+      })
+    } else {
+      result.sort((a, b) => (b.note_moyenne || 0) - (a.note_moyenne || 0))
+    }
+
     setPrestataires(result)
     setLoading(false)
+  }
+
+  const toggleFiltre = (key) => setFiltres(f => ({ ...f, [key]: !f[key] }))
+
+  const hasActiveFilters = filtres.disponible || filtres.certifie || filtres.proximite ||
+    filtres.localisation || filtres.prix_max || filtres.categorie || search
+
+  const formatDistance = (km) => {
+    if (km < 1) return Math.round(km * 1000) + ' m'
+    return km.toFixed(1) + ' km'
   }
 
   return (
@@ -53,9 +109,12 @@ const RechercherPrestataire = () => {
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 md:px-6 py-8">
 
         <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight mb-1">Trouver un prestataire</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight mb-1">
+            Trouver un prestataire
+          </h1>
           <p className="text-gray-400 text-sm">
-            {prestataires.length} prestataire{prestataires.length > 1 ? 's' : ''} disponible{prestataires.length > 1 ? 's' : ''}
+            {prestataires.length} prestataire{prestataires.length > 1 ? 's' : ''} trouvé{prestataires.length > 1 ? 's' : ''}
+            {geo.location && filtres.proximite && ' · Triés par distance'}
           </p>
         </div>
 
@@ -63,29 +122,101 @@ const RechercherPrestataire = () => {
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher par métier, nom ou compétence..."
             className="w-full px-5 py-4 pl-12 bg-white border border-gray-200 rounded-2xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all shadow-card" />
-          <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-          <select value={filtres.categorie} onChange={(e) => setFiltres({ ...filtres, categorie: e.target.value })}
-            className="px-3 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:border-gray-900 transition-all shadow-card">
-            <option value="">Toutes catégories</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
-          </select>
-          <input type="text" value={filtres.localisation} onChange={(e) => setFiltres({ ...filtres, localisation: e.target.value })}
-            placeholder="Localisation"
-            className="px-3 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-gray-900 transition-all shadow-card" />
-          <input type="number" value={filtres.prix_max} onChange={(e) => setFiltres({ ...filtres, prix_max: e.target.value })}
-            placeholder="Budget max"
-            className="px-3 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-gray-900 transition-all shadow-card" />
-          <button onClick={() => setFiltres({ ...filtres, disponible: !filtres.disponible })}
-            className={`px-3 py-3 rounded-xl text-sm font-semibold border-2 transition-all ${
-              filtres.disponible ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-400'
-            }`}>
-            Disponible
-          </button>
+        <div className="space-y-3 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <select value={filtres.categorie}
+              onChange={(e) => setFiltres({ ...filtres, categorie: e.target.value })}
+              className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:border-gray-900 transition-all shadow-card">
+              <option value="">Toutes catégories</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+            </select>
+            <input type="text" value={filtres.localisation}
+              onChange={(e) => setFiltres({ ...filtres, localisation: e.target.value })}
+              placeholder="Filtrer par ville"
+              className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-gray-900 transition-all shadow-card" />
+            <input type="number" value={filtres.prix_max}
+              onChange={(e) => setFiltres({ ...filtres, prix_max: e.target.value })}
+              placeholder="Budget max (FCFA)"
+              className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-gray-900 transition-all shadow-card" />
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => toggleFiltre('disponible')}
+              className={`px-4 py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                filtres.disponible ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-400'
+              }`}>
+              Disponible
+            </button>
+
+            <button onClick={() => toggleFiltre('certifie')}
+              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                filtres.certifie ? 'border-blue-500 bg-blue-500 text-white' : 'border-gray-200 bg-white text-gray-500 hover:border-blue-300'
+              }`}>
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+              </svg>
+              Certifié CNI
+            </button>
+
+            <button
+              onClick={() => {
+                if (!filtres.proximite && !geo.location) geo.startWatching()
+                toggleFiltre('proximite')
+              }}
+              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                filtres.proximite ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-gray-200 bg-white text-gray-500 hover:border-emerald-300'
+              }`}>
+              {geo.loading ? (
+                <div className="w-3 h-3 border-2 border-current/40 border-t-current rounded-full animate-spin" />
+              ) : (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              )}
+              {geo.loading ? 'Localisation...' : 'Près de moi'}
+              {geo.location && filtres.proximite && (
+                <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+              )}
+            </button>
+
+            {hasActiveFilters && (
+              <button onClick={() => {
+                setSearch('')
+                setFiltres({ categorie: '', localisation: '', prix_max: '', disponible: false, certifie: false, proximite: false })
+              }}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold border-2 border-red-200 bg-white text-red-500 hover:bg-red-50 transition-all">
+                Réinitialiser
+              </button>
+            )}
+          </div>
+
+          {geo.error && filtres.proximite && (
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl">
+              <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p className="text-xs text-red-600 font-medium">{geo.error}</p>
+            </div>
+          )}
+
+          {geo.location && filtres.proximite && (
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse flex-shrink-0" />
+              <p className="text-xs text-emerald-700 font-medium">
+                Localisation en temps réel · Précision : {Math.round(geo.location.accuracy)} m
+              </p>
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -100,13 +231,14 @@ const RechercherPrestataire = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {prestataires.map((p) => (
-              <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-card hover:shadow-card-hover transition-all overflow-hidden">
+              <div key={p.id}
+                className="bg-white rounded-2xl border border-gray-100 shadow-card hover:shadow-card-hover transition-all overflow-hidden">
                 <div className="p-4 md:p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <Avatar url={p.profile?.avatar_url} nom={p.profile?.nom} size="md" />
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="text-sm font-bold text-gray-900 truncate">{p.profile?.nom}</p>
                           {p.verifie_cni && <VerifiedBadge size="sm" />}
                         </div>
@@ -120,12 +252,20 @@ const RechercherPrestataire = () => {
                     <p className="text-xs text-gray-500 leading-relaxed mb-3 line-clamp-2">{p.profile.bio}</p>
                   )}
 
-                  {p.note_moyenne > 0 && (
-                    <div className="flex items-center gap-2 mb-3">
-                      <StarRating note={Math.round(p.note_moyenne)} size="sm" />
-                      <span className="text-xs text-gray-500 font-medium">{p.note_moyenne}/5</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3 mb-3 flex-wrap">
+                    {p.note_moyenne > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <StarRating note={Math.round(p.note_moyenne)} size="sm" />
+                        <span className="text-xs text-gray-500 font-medium">{p.note_moyenne}/5</span>
+                      </div>
+                    )}
+                    {p.distance !== null && (
+                      <span className="flex items-center gap-1 text-xs text-emerald-600 font-semibold">
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                        {formatDistance(p.distance)}
+                      </span>
+                    )}
+                  </div>
 
                   {p.competences?.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mb-3">

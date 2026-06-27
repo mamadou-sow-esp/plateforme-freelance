@@ -8,6 +8,7 @@ import Avatar from '../../components/ui/Avatar'
 const RechercherMission = () => {
   const { profile } = useAuth()
   const [missions, setMissions] = useState([])
+  const [missionsAssignees, setMissionsAssignees] = useState([])
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -24,12 +25,18 @@ const RechercherMission = () => {
 
   const fetchMissions = async () => {
     setLoading(true)
+
+    // Missions disponibles (sans prestataire)
     let query = supabase
       .from('missions')
       .select('*, categorie:categories(nom), client:profiles!missions_client_id_fkey(nom, localisation, avatar_url)')
-      .eq('statut', 'en_attente').is('prestataire_id', null).order('created_at', { ascending: false })
+      .eq('statut', 'en_attente')
+      .is('prestataire_id', null)
+      .order('created_at', { ascending: false })
+
     if (filtres.categorie_id) query = query.eq('categorie_id', filtres.categorie_id)
     if (filtres.budget_min) query = query.gte('budget', filtres.budget_min)
+
     const { data } = await query
     let result = data || []
     if (search) {
@@ -42,12 +49,24 @@ const RechercherMission = () => {
       result = result.filter(m => m.localisation?.toLowerCase().includes(filtres.localisation.toLowerCase()))
     }
     setMissions(result)
+
+    // Missions assignées directement à ce prestataire mais pas encore acceptées
+    const { data: assignees } = await supabase
+      .from('missions')
+      .select('*, categorie:categories(nom), client:profiles!missions_client_id_fkey(nom, localisation, avatar_url)')
+      .eq('prestataire_id', profile?.id)
+      .eq('statut', 'en_attente')
+      .order('created_at', { ascending: false })
+
+    setMissionsAssignees(assignees || [])
     setLoading(false)
   }
 
   const handlePostuler = async (missionId) => {
-    const { error } = await supabase.from('missions')
-      .update({ prestataire_id: profile?.id, statut: 'en_attente' }).eq('id', missionId)
+    const { error } = await supabase
+      .from('missions')
+      .update({ prestataire_id: profile?.id, statut: 'en_attente' })
+      .eq('id', missionId)
     if (error) {
       setNotification('error:' + error.message)
       setTimeout(() => setNotification(''), 4000)
@@ -55,6 +74,18 @@ const RechercherMission = () => {
     }
     setNotification('success:Candidature envoyée ! Le client doit accepter votre demande.')
     setTimeout(() => setNotification(''), 4000)
+    fetchMissions()
+  }
+
+  const handleAccepterMission = async (missionId) => {
+    await supabase.from('missions').update({ statut: 'en_cours' }).eq('id', missionId)
+    setNotification('success:Mission acceptée ! Elle est maintenant en cours.')
+    setTimeout(() => setNotification(''), 4000)
+    fetchMissions()
+  }
+
+  const handleRefuserMission = async (missionId) => {
+    await supabase.from('missions').update({ statut: 'en_attente', prestataire_id: null }).eq('id', missionId)
     fetchMissions()
   }
 
@@ -84,6 +115,60 @@ const RechercherMission = () => {
           </p>
         </div>
 
+        {/* Missions assignées directement */}
+        {missionsAssignees.length > 0 && (
+          <div className="mb-8">
+            <h2 className="font-bold text-gray-900 text-sm mb-3 flex items-center gap-2">
+              Missions qui m'ont été assignées
+              <span className="w-5 h-5 bg-amber-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                {missionsAssignees.length}
+              </span>
+            </h2>
+            <div className="space-y-3">
+              {missionsAssignees.map(mission => (
+                <div key={mission.id}
+                  className="bg-white rounded-2xl border border-amber-200 shadow-card p-4 md:p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0 mr-3">
+                      <h3 className="text-sm font-bold text-gray-900 mb-1 truncate">{mission.titre}</h3>
+                      <p className="text-xs text-gray-400 line-clamp-2">{mission.description}</p>
+                    </div>
+                    <span className="text-base font-bold text-gray-900 whitespace-nowrap flex-shrink-0">
+                      {mission.budget?.toLocaleString()} FCFA
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-xs mb-4 flex-wrap">
+                    {mission.categorie?.nom && (
+                      <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-xl font-semibold">{mission.categorie.nom}</span>
+                    )}
+                    {mission.localisation && <span className="text-gray-400">{mission.localisation}</span>}
+                    {mission.delai && <><span className="text-gray-300">·</span><span className="text-gray-400">{mission.delai}</span></>}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Avatar url={mission.client?.avatar_url} nom={mission.client?.nom} size="xs" />
+                      <span className="text-xs text-gray-400 font-medium">{mission.client?.nom}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleRefuserMission(mission.id)}
+                        className="px-3 py-1.5 border border-gray-200 text-gray-500 text-xs font-semibold rounded-xl hover:border-red-300 hover:text-red-500 transition-all">
+                        Refuser
+                      </button>
+                      <button onClick={() => handleAccepterMission(mission.id)}
+                        className="px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
+                        Accepter
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recherche */}
         <div className="relative mb-4">
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher une mission..."
@@ -119,7 +204,8 @@ const RechercherMission = () => {
         ) : (
           <div className="space-y-3">
             {missions.map((mission) => (
-              <div key={mission.id} className="bg-white rounded-2xl border border-gray-100 shadow-card hover:shadow-card-hover transition-all p-4 md:p-5">
+              <div key={mission.id}
+                className="bg-white rounded-2xl border border-gray-100 shadow-card hover:shadow-card-hover transition-all p-4 md:p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0 mr-3">
                     <h3 className="text-sm font-bold text-gray-900 mb-1 truncate">{mission.titre}</h3>
@@ -141,7 +227,7 @@ const RechercherMission = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Avatar url={mission.client?.avatar_url} nom={mission.client?.nom} size="xs" />
-                    <span className="text-xs text-gray-400 font-medium truncate max-w-24">{mission.client?.nom}</span>
+                    <span className="text-xs text-gray-400 font-medium truncate max-w-28">{mission.client?.nom}</span>
                   </div>
                   <button onClick={() => handlePostuler(mission.id)}
                     className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all flex-shrink-0">
