@@ -5,6 +5,25 @@ import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import VerifiedBadge from '../../components/ui/VerifiedBadge'
 
+const Toast = ({ message, type = 'success', onClose }) => {
+  if (!message) return null
+  return (
+    <div className={`fixed top-4 right-4 left-4 md:left-auto md:right-6 md:top-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-modal border max-w-sm ${
+      type === 'location' ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+      : type === 'error' ? 'bg-red-50 border-red-200 text-red-700'
+      : 'bg-white border-gray-200 text-gray-900'
+    }`}>
+      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+        type === 'location' ? 'bg-emerald-500 animate-pulse'
+        : type === 'error' ? 'bg-red-500'
+        : 'bg-emerald-500'
+      }`} />
+      <p className="text-sm font-medium flex-1">{message}</p>
+      <button onClick={onClose} className="text-gray-400 hover:text-gray-600 font-bold flex-shrink-0 text-lg leading-none">×</button>
+    </div>
+  )
+}
+
 const MonProfilPrestataire = () => {
   const { profile } = useAuth()
   const [profil, setProfil] = useState(null)
@@ -15,9 +34,8 @@ const MonProfilPrestataire = () => {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [detectingLocation, setDetectingLocation] = useState(false)
   const [locationSaved, setLocationSaved] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [error, setError] = useState('')
   const [avatarUrl, setAvatarUrl] = useState(null)
+  const [toast, setToast] = useState({ message: '', type: 'success' })
 
   const [form, setForm] = useState({
     metier: '', competences: '', prix_min: '', prix_max: '',
@@ -26,6 +44,11 @@ const MonProfilPrestataire = () => {
   })
 
   useEffect(() => { if (profile?.id) fetchData() }, [profile?.id])
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast({ message: '', type: 'success' }), 4000)
+  }
 
   const fetchData = async () => {
     const { data: profileData } = await supabase
@@ -37,7 +60,6 @@ const MonProfilPrestataire = () => {
       setAvatarUrl(profileData.avatar_url)
       setLocationSaved(!!(profileData.latitude && profileData.longitude))
     }
-
     if (prestData) {
       setProfil(prestData)
       setForm({
@@ -63,11 +85,8 @@ const MonProfilPrestataire = () => {
 
   const handleSave = async () => {
     setSaving(true)
-    setError('')
-    setSuccess(false)
     try {
       const competencesArray = form.competences.split(',').map(c => c.trim()).filter(c => c !== '')
-
       const { error: prestError } = await supabase.from('prestataires').update({
         metier: form.metier,
         competences: competencesArray,
@@ -87,10 +106,9 @@ const MonProfilPrestataire = () => {
       if (profileError) throw profileError
 
       await fetchData()
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      showToast('Profil sauvegardé avec succès ✓', 'success')
     } catch (err) {
-      setError(err.message || 'Une erreur est survenue')
+      showToast(err.message || 'Une erreur est survenue', 'error')
     } finally {
       setSaving(false)
     }
@@ -98,38 +116,32 @@ const MonProfilPrestataire = () => {
 
   const handleDetecterPosition = () => {
     if (!navigator.geolocation) {
-      setError('Géolocalisation non supportée par votre navigateur')
+      showToast('Géolocalisation non supportée par votre navigateur', 'error')
       return
     }
     setDetectingLocation(true)
-    setError('')
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const { latitude, longitude } = pos.coords
+        const { latitude, longitude, accuracy } = pos.coords
         try {
-          const { error: geoError } = await supabase
-            .from('profiles')
-            .update({ latitude, longitude })
-            .eq('id', profile?.id)
-          if (geoError) throw geoError
+          const { error } = await supabase.from('profiles')
+            .update({ latitude, longitude }).eq('id', profile?.id)
+          if (error) throw error
           setLocationSaved(true)
           setDetectingLocation(false)
-          setSuccess(true)
-          setTimeout(() => setSuccess(false), 3000)
+          showToast(`📍 Localisation mise à jour ! Précision : ${Math.round(accuracy)} m`, 'location')
         } catch (err) {
-          setError('Erreur lors de la sauvegarde de la position')
+          showToast('Erreur lors de la sauvegarde de la position', 'error')
           setDetectingLocation(false)
         }
       },
       (err) => {
         setDetectingLocation(false)
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            setError('Permission refusée. Activez la localisation dans les paramètres.')
-            break
-          default:
-            setError('Impossible de détecter votre position. Réessayez.')
+        if (err.code === err.PERMISSION_DENIED) {
+          showToast('Permission refusée. Activez la localisation dans les paramètres.', 'error')
+        } else {
+          showToast('Impossible de détecter votre position. Réessayez.', 'error')
         }
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -137,10 +149,9 @@ const MonProfilPrestataire = () => {
   }
 
   const handleSupprimerPosition = async () => {
-    await supabase.from('profiles')
-      .update({ latitude: null, longitude: null })
-      .eq('id', profile?.id)
+    await supabase.from('profiles').update({ latitude: null, longitude: null }).eq('id', profile?.id)
     setLocationSaved(false)
+    showToast('Position GPS supprimée', 'success')
   }
 
   const handleUploadAvatar = async (e) => {
@@ -156,10 +167,9 @@ const MonProfilPrestataire = () => {
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName)
       await supabase.from('profiles').update({ avatar_url: urlData.publicUrl }).eq('id', profile?.id)
       setAvatarUrl(urlData.publicUrl)
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      showToast('Photo de profil mise à jour ✓', 'success')
     } catch (err) {
-      setError("Erreur lors de l'upload de l'avatar.")
+      showToast("Erreur lors de l'upload de l'avatar.", 'error')
     } finally {
       setUploadingAvatar(false)
     }
@@ -177,13 +187,11 @@ const MonProfilPrestataire = () => {
       if (uploadError) throw uploadError
       const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName)
       await supabase.from('prestataires')
-        .update({ cni_url: urlData.publicUrl, verifie_cni: false })
-        .eq('id', profile?.id)
+        .update({ cni_url: urlData.publicUrl, verifie_cni: false }).eq('id', profile?.id)
       await fetchData()
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      showToast('CNI uploadée — en attente de vérification', 'success')
     } catch (err) {
-      setError("Erreur lors de l'upload de la CNI.")
+      showToast("Erreur lors de l'upload de la CNI.", 'error')
     } finally {
       setUploading(false)
     }
@@ -202,10 +210,9 @@ const MonProfilPrestataire = () => {
       const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName)
       await supabase.from('prestataires').update({ cv_url: urlData.publicUrl }).eq('id', profile?.id)
       await fetchData()
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      showToast('CV uploadé avec succès ✓', 'success')
     } catch (err) {
-      setError("Erreur lors de l'upload du CV.")
+      showToast("Erreur lors de l'upload du CV.", 'error')
     } finally {
       setUploadingCV(false)
     }
@@ -213,6 +220,7 @@ const MonProfilPrestataire = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'success' })} />
       <Navbar />
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 md:px-6 py-8">
 
@@ -220,17 +228,6 @@ const MonProfilPrestataire = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Mon profil</h1>
           <p className="text-gray-400 text-sm mt-1">Gérez vos informations et vos services</p>
         </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-6 text-sm font-medium">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 mb-6 text-sm font-medium">
-            Profil mis à jour avec succès ✓
-          </div>
-        )}
 
         {loading ? (
           <div className="text-center py-20">
@@ -285,7 +282,7 @@ const MonProfilPrestataire = () => {
               </div>
             </div>
 
-            {/* Infos personnelles */}
+            {/* Infos */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6">
               <h2 className="font-bold text-gray-900 text-sm mb-5">Informations personnelles</h2>
               <div className="space-y-4">
@@ -310,7 +307,6 @@ const MonProfilPrestataire = () => {
               <p className="text-xs text-gray-400 mb-5">
                 Permet aux clients de vous trouver via le filtre "Près de moi"
               </p>
-
               {locationSaved ? (
                 <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
                   <div className="flex items-center gap-3">
@@ -329,7 +325,12 @@ const MonProfilPrestataire = () => {
                   <div className="flex gap-2 ml-4 flex-shrink-0">
                     <button onClick={handleDetecterPosition} disabled={detectingLocation}
                       className="px-3 py-1.5 border border-emerald-300 text-emerald-700 text-xs font-semibold rounded-xl hover:bg-emerald-100 transition-all disabled:opacity-40">
-                      {detectingLocation ? 'Détection...' : 'Mettre à jour'}
+                      {detectingLocation ? (
+                        <span className="flex items-center gap-1.5">
+                          <div className="w-3 h-3 border-2 border-emerald-400 border-t-emerald-700 rounded-full animate-spin" />
+                          Détection...
+                        </span>
+                      ) : 'Mettre à jour'}
                     </button>
                     <button onClick={handleSupprimerPosition}
                       className="px-3 py-1.5 border border-gray-200 text-gray-500 text-xs font-semibold rounded-xl hover:border-red-300 hover:text-red-500 transition-all">
@@ -401,7 +402,7 @@ const MonProfilPrestataire = () => {
               </div>
             </div>
 
-            {/* Liens pro */}
+            {/* Liens */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6">
               <h2 className="font-bold text-gray-900 text-sm mb-1">Liens professionnels</h2>
               <p className="text-xs text-gray-400 mb-5">Optionnel — renforcez la crédibilité de votre profil</p>
@@ -494,7 +495,12 @@ const MonProfilPrestataire = () => {
 
             <button onClick={handleSave} disabled={saving}
               className="w-full py-3.5 bg-gray-900 text-white font-semibold text-sm rounded-xl hover:bg-black transition-all disabled:opacity-40">
-              {saving ? 'Sauvegarde...' : 'Sauvegarder les modifications'}
+              {saving ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Sauvegarde...
+                </span>
+              ) : 'Sauvegarder les modifications'}
             </button>
           </div>
         )}

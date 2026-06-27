@@ -5,30 +5,47 @@ import { useAuth } from '../../context/AuthContext'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 
+const Toast = ({ message, type = 'success', onClose }) => {
+  if (!message) return null
+  return (
+    <div className={`fixed top-4 right-4 left-4 md:left-auto md:right-6 md:top-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-modal border max-w-sm ${
+      type === 'location' ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+      : type === 'error' ? 'bg-red-50 border-red-200 text-red-700'
+      : 'bg-white border-gray-200 text-gray-900'
+    }`}>
+      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+        type === 'location' ? 'bg-emerald-500 animate-pulse'
+        : type === 'error' ? 'bg-red-500'
+        : 'bg-emerald-500'
+      }`} />
+      <p className="text-sm font-medium flex-1">{message}</p>
+      <button onClick={onClose} className="text-gray-400 hover:text-gray-600 font-bold flex-shrink-0 text-lg leading-none">×</button>
+    </div>
+  )
+}
+
 const MonProfilClient = () => {
   const { profile } = useAuth()
   const [loading, setLoading] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [detectingLocation, setDetectingLocation] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [error, setError] = useState('')
   const [avatarUrl, setAvatarUrl] = useState(null)
   const [locationSaved, setLocationSaved] = useState(false)
+  const [toast, setToast] = useState({ message: '', type: 'success' })
   const [form, setForm] = useState({
     nom: '', telephone: '', localisation: '', bio: ''
   })
 
-  useEffect(() => {
-    if (profile?.id) fetchProfileData()
-  }, [profile?.id])
+  useEffect(() => { if (profile?.id) fetchProfileData() }, [profile?.id])
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast({ message: '', type: 'success' }), 4000)
+  }
 
   const fetchProfileData = async () => {
     const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', profile?.id)
-      .single()
-
+      .from('profiles').select('*').eq('id', profile?.id).single()
     if (data) {
       setAvatarUrl(data.avatar_url)
       setLocationSaved(!!(data.latitude && data.longitude))
@@ -45,24 +62,18 @@ const MonProfilClient = () => {
 
   const handleSave = async () => {
     setLoading(true)
-    setError('')
-    setSuccess(false)
     try {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          nom: form.nom,
-          telephone: form.telephone,
-          localisation: form.localisation,
-          bio: form.bio,
-        })
-        .eq('id', profile?.id)
-      if (profileError) throw profileError
+      const { error } = await supabase.from('profiles').update({
+        nom: form.nom,
+        telephone: form.telephone,
+        localisation: form.localisation,
+        bio: form.bio,
+      }).eq('id', profile?.id)
+      if (error) throw error
       await fetchProfileData()
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      showToast('Profil sauvegardé avec succès ✓', 'success')
     } catch (err) {
-      setError(err.message || 'Une erreur est survenue')
+      showToast(err.message || 'Une erreur est survenue', 'error')
     } finally {
       setLoading(false)
     }
@@ -70,38 +81,32 @@ const MonProfilClient = () => {
 
   const handleDetecterPosition = () => {
     if (!navigator.geolocation) {
-      setError('Géolocalisation non supportée par votre navigateur')
+      showToast('Géolocalisation non supportée par votre navigateur', 'error')
       return
     }
     setDetectingLocation(true)
-    setError('')
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude, accuracy } = pos.coords
         try {
-          const { error: geoError } = await supabase
-            .from('profiles')
-            .update({ latitude, longitude })
-            .eq('id', profile?.id)
-          if (geoError) throw geoError
+          const { error } = await supabase.from('profiles')
+            .update({ latitude, longitude }).eq('id', profile?.id)
+          if (error) throw error
           setLocationSaved(true)
-          setSuccess(true)
           setDetectingLocation(false)
-          setTimeout(() => setSuccess(false), 3000)
+          showToast(`📍 Localisation mise à jour ! Précision : ${Math.round(accuracy)} m`, 'location')
         } catch (err) {
-          setError('Erreur lors de la sauvegarde de la position')
+          showToast('Erreur lors de la sauvegarde de la position', 'error')
           setDetectingLocation(false)
         }
       },
       (err) => {
         setDetectingLocation(false)
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            setError('Permission refusée. Activez la localisation dans les paramètres.')
-            break
-          default:
-            setError('Impossible de détecter votre position. Réessayez.')
+        if (err.code === err.PERMISSION_DENIED) {
+          showToast('Permission refusée. Activez la localisation dans les paramètres.', 'error')
+        } else {
+          showToast('Impossible de détecter votre position. Réessayez.', 'error')
         }
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -109,17 +114,15 @@ const MonProfilClient = () => {
   }
 
   const handleSupprimerPosition = async () => {
-    await supabase.from('profiles')
-      .update({ latitude: null, longitude: null })
-      .eq('id', profile?.id)
+    await supabase.from('profiles').update({ latitude: null, longitude: null }).eq('id', profile?.id)
     setLocationSaved(false)
+    showToast('Position GPS supprimée', 'success')
   }
 
   const handleUploadAvatar = async (e) => {
     const file = e.target.files[0]
     if (!file) return
     setUploadingAvatar(true)
-    setError('')
     try {
       const ext = file.name.split('.').pop()
       const fileName = profile?.id + '/avatar.' + ext
@@ -127,14 +130,11 @@ const MonProfilClient = () => {
         .from('avatars').upload(fileName, file, { upsert: true })
       if (uploadError) throw uploadError
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName)
-      await supabase.from('profiles')
-        .update({ avatar_url: urlData.publicUrl })
-        .eq('id', profile?.id)
+      await supabase.from('profiles').update({ avatar_url: urlData.publicUrl }).eq('id', profile?.id)
       setAvatarUrl(urlData.publicUrl)
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      showToast('Photo de profil mise à jour ✓', 'success')
     } catch (err) {
-      setError("Erreur lors de l'upload de la photo.")
+      showToast("Erreur lors de l'upload de la photo.", 'error')
     } finally {
       setUploadingAvatar(false)
     }
@@ -142,6 +142,7 @@ const MonProfilClient = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'success' })} />
       <Navbar />
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 md:px-6 py-8">
 
@@ -149,17 +150,6 @@ const MonProfilClient = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Mon profil</h1>
           <p className="text-gray-400 text-sm mt-1">Gérez vos informations personnelles</p>
         </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-6 text-sm font-medium">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 mb-6 text-sm font-medium">
-            Profil mis à jour avec succès ✓
-          </div>
-        )}
 
         <div className="space-y-4">
 
@@ -236,13 +226,12 @@ const MonProfilClient = () => {
             </div>
           </div>
 
-          {/* Géolocalisation */}
+          {/* Position GPS */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6">
             <h2 className="font-bold text-gray-900 text-sm mb-1">Ma position GPS</h2>
             <p className="text-xs text-gray-400 mb-5">
-              Permet aux prestataires de vous trouver plus facilement selon votre localisation réelle
+              Permet de calculer la distance réelle avec les prestataires autour de vous
             </p>
-
             {locationSaved ? (
               <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
                 <div className="flex items-center gap-3">
@@ -255,13 +244,18 @@ const MonProfilClient = () => {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-emerald-800">Position enregistrée ✓</p>
-                    <p className="text-xs text-emerald-600 mt-0.5">Votre position GPS est sauvegardée</p>
+                    <p className="text-xs text-emerald-600 mt-0.5">Mettez à jour si vous avez changé de lieu</p>
                   </div>
                 </div>
-                <div className="flex gap-2 ml-4">
+                <div className="flex gap-2 ml-4 flex-shrink-0">
                   <button onClick={handleDetecterPosition} disabled={detectingLocation}
                     className="px-3 py-1.5 border border-emerald-300 text-emerald-700 text-xs font-semibold rounded-xl hover:bg-emerald-100 transition-all disabled:opacity-40">
-                    {detectingLocation ? 'Détection...' : 'Mettre à jour'}
+                    {detectingLocation ? (
+                      <span className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 border-2 border-emerald-400 border-t-emerald-700 rounded-full animate-spin" />
+                        Détection...
+                      </span>
+                    ) : 'Mettre à jour'}
                   </button>
                   <button onClick={handleSupprimerPosition}
                     className="px-3 py-1.5 border border-gray-200 text-gray-500 text-xs font-semibold rounded-xl hover:border-red-300 hover:text-red-500 transition-all">
@@ -307,7 +301,12 @@ const MonProfilClient = () => {
 
           <button onClick={handleSave} disabled={loading}
             className="w-full py-3.5 bg-gray-900 text-white font-semibold text-sm rounded-xl hover:bg-black transition-all disabled:opacity-40">
-            {loading ? 'Sauvegarde...' : 'Sauvegarder les modifications'}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Sauvegarde...
+              </span>
+            ) : 'Sauvegarder les modifications'}
           </button>
         </div>
       </main>
