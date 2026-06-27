@@ -20,27 +20,28 @@ const Footer = () => {
   return (
     <footer className="border-t border-gray-100 bg-white mt-auto">
       {partenaires.length > 0 && (
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest text-center mb-6">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <p className="text-xs font-bold text-gray-900 uppercase tracking-widest text-center mb-10">
             Nos partenaires
           </p>
-          <div className="flex items-center justify-center flex-wrap gap-8">
+          <div className="flex items-center justify-center flex-wrap gap-10">
             {partenaires.map(p => (
               <a
                 key={p.id}
                 href={p.site_url || '#'}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-2 group transition-all"
+                className="flex items-center gap-2 group transition-all duration-300"
               >
                 {p.logo_url ? (
                   <img
                     src={p.logo_url}
                     alt={p.nom}
-                    className="h-8 object-contain grayscale group-hover:grayscale-0 transition-all opacity-60 group-hover:opacity-100"
+                    className="h-14 w-auto object-contain filter-none opacity-100 group-hover:scale-110 transition-all duration-300"
+                    style={{ maxWidth: '140px' }}
                   />
                 ) : (
-                  <span className="text-sm font-semibold text-gray-400 group-hover:text-gray-900 transition-all">
+                  <span className="text-base font-bold text-gray-700 group-hover:text-black transition-all">
                     {p.nom}
                   </span>
                 )}
@@ -49,12 +50,13 @@ const Footer = () => {
           </div>
         </div>
       )}
-      <div className="max-w-7xl mx-auto px-6 py-4 border-t border-gray-100">
-  <div className="flex items-center justify-between">
-    <p className="text-xs text-gray-400">2026 Alicia - Plateforme freelance du Senegal</p>
-    <p className="text-xs text-gray-400">Tous droits reserves</p>
-  </div>
-</div>
+
+      <div className={`${partenaires.length > 0 ? 'border-t border-gray-100' : ''} max-w-7xl mx-auto px-6 py-4`}>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-gray-400">2026 Alicia - Plateforme freelance du Senegal</p>
+          <p className="text-xs text-gray-400">Tous droits reserves</p>
+        </div>
+      </div>
     </footer>
   )
 }

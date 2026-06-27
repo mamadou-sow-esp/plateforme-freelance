@@ -60,7 +60,7 @@ const Navbar = () => {
 
         {/* Logo */}
         <Link to={homeLink} className="flex-shrink-0">
-          <img src={logo} alt="Alicia" className="h-10 w-auto object-contain" />
+          <img src={logo} alt="Alicia" className="h-12 w-auto object-contain" />
         </Link>
 
         {/* Nav desktop */}

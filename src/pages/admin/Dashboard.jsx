@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import Navbar from '../../components/layout/Navbar'
@@ -9,17 +8,18 @@ import StatusBadge from '../../components/ui/StatusBadge'
 
 const AdminDashboard = () => {
   const { profile } = useAuth()
-  const navigate = useNavigate()
   const [stats, setStats] = useState({ users: 0, prestataires: 0, clients: 0, missions: 0, missions_en_cours: 0, missions_validees: 0 })
   const [users, setUsers] = useState([])
   const [missions, setMissions] = useState([])
   const [partenaires, setPartenaires] = useState([])
+  const [prestatairesNonVerifies, setPrestatairesNonVerifies] = useState([])
   const [onglet, setOnglet] = useState('overview')
   const [loading, setLoading] = useState(true)
   const [partenaireForm, setPartenaireForm] = useState({ nom: '', site_url: '', logo_url: '', actif: true, ordre: 0 })
   const [showPartenaireForm, setShowPartenaireForm] = useState(false)
   const [savingPartenaire, setSavingPartenaire] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [cniModal, setCniModal] = useState(null)
 
   useEffect(() => { fetchData() }, [])
 
@@ -31,11 +31,17 @@ const AdminDashboard = () => {
 
     const { data: missionsData } = await supabase
       .from('missions')
-      .select(`*, categorie:categories(nom), client:profiles!missions_client_id_fkey(nom), prestataire:profiles!missions_prestataire_id_fkey(nom)`)
+      .select('*, categorie:categories(nom), client:profiles!missions_client_id_fkey(nom), prestataire:profiles!missions_prestataire_id_fkey(nom)')
       .order('created_at', { ascending: false })
 
     const { data: partenairesData } = await supabase
       .from('partenaires').select('*').order('ordre', { ascending: true })
+
+    const { data: cniData } = await supabase
+      .from('prestataires')
+      .select('*, profile:profiles(nom, email, avatar_url)')
+      .not('cni_url', 'is', null)
+      .order('created_at', { ascending: false })
 
     const u = usersData || []
     const m = missionsData || []
@@ -43,6 +49,7 @@ const AdminDashboard = () => {
     setUsers(u)
     setMissions(m)
     setPartenaires(partenairesData || [])
+    setPrestatairesNonVerifies(cniData || [])
     setStats({
       users: u.length,
       prestataires: u.filter(x => x.role === 'prestataire').length,
@@ -70,6 +77,36 @@ const AdminDashboard = () => {
     await supabase.from('missions').delete().eq('id', id)
     fetchData()
   }
+
+  const handleValiderCNI = async (prestataireId) => {
+  const { error } = await supabase
+    .from('prestataires')
+    .update({ verifie_cni: true })
+    .eq('id', prestataireId)
+
+  if (error) {
+    alert('Erreur : ' + error.message)
+    return
+  }
+
+  setCniModal(null)
+  fetchData()
+}
+
+const handleRefuserCNI = async (prestataireId) => {
+  const { error } = await supabase
+    .from('prestataires')
+    .update({ verifie_cni: false, cni_url: null })
+    .eq('id', prestataireId)
+
+  if (error) {
+    alert('Erreur : ' + error.message)
+    return
+  }
+
+  setCniModal(null)
+  fetchData()
+}
 
   const handleUploadLogo = async (e) => {
     const file = e.target.files[0]
@@ -116,8 +153,12 @@ const AdminDashboard = () => {
     fetchData()
   }
 
+  const cniEnAttente = prestatairesNonVerifies.filter(p => !p.verifie_cni)
+  const cniVerifies = prestatairesNonVerifies.filter(p => p.verifie_cni)
+
   const onglets = [
     { key: 'overview', label: 'Vue globale' },
+    { key: 'cni', label: 'Verification CNI', badge: cniEnAttente.length },
     { key: 'users', label: 'Utilisateurs' },
     { key: 'missions', label: 'Missions' },
     { key: 'partenaires', label: 'Partenaires' },
@@ -126,6 +167,83 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
+
+      {/* Modal CNI */}
+      {cniModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: 'rgba(0,0,0,0.6)' }}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-modal">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg">Verification CNI</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{cniModal.profile?.nom} — {cniModal.profile?.email}</p>
+              </div>
+              <button onClick={() => setCniModal(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-all">
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl mb-5">
+              <Avatar url={cniModal.profile?.avatar_url} nom={cniModal.profile?.nom} size="md" />
+              <div>
+                <p className="text-sm font-bold text-gray-900">{cniModal.profile?.nom}</p>
+                <p className="text-xs text-gray-400">{cniModal.metier}</p>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {cniModal.competences?.map((c, i) => (
+                    <span key={i} className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-lg font-medium">{c}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Document CNI</p>
+              {cniModal.cni_url ? (
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  {cniModal.cni_url.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                    <img src={cniModal.cni_url} alt="CNI" className="w-full max-h-96 object-contain bg-gray-50" />
+                  ) : (
+                    <div className="p-6 text-center bg-gray-50">
+                      <p className="text-sm text-gray-500 mb-3">Document PDF</p>
+                      <a href={cniModal.cni_url} target="_blank" rel="noreferrer"
+                        className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
+                        Ouvrir le document
+                      </a>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-6 text-center bg-gray-50 rounded-xl border border-gray-200">
+                  <p className="text-sm text-gray-400">Aucun document disponible</p>
+                </div>
+              )}
+            </div>
+
+            {cniModal.verifie_cni ? (
+              <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl mb-5">
+                <svg className="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <p className="text-sm font-semibold text-emerald-800">Ce prestataire est deja verifie</p>
+              </div>
+            ) : null}
+
+            <div className="flex gap-3">
+              <button onClick={() => handleRefuserCNI(cniModal.id)}
+                className="flex-1 py-3 border border-red-200 text-red-600 text-sm font-semibold rounded-xl hover:bg-red-50 transition-all">
+                Refuser et supprimer
+              </button>
+              <button onClick={() => handleValiderCNI(cniModal.id)}
+                className="flex-1 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 transition-all">
+                Valider la CNI
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-10">
 
@@ -139,10 +257,17 @@ const AdminDashboard = () => {
         <div className="flex gap-2 mb-8 overflow-x-auto pb-1">
           {onglets.map(o => (
             <button key={o.key} onClick={() => setOnglet(o.key)}
-              className={`px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+              className={`relative px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
                 onglet === o.key ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-400 shadow-card'
               }`}>
               {o.label}
+              {o.badge > 0 && (
+                <span className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center ${
+                  onglet === o.key ? 'bg-white text-gray-900' : 'bg-red-500 text-white'
+                }`}>
+                  {o.badge}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -153,6 +278,7 @@ const AdminDashboard = () => {
           </div>
         ) : (
           <>
+            {/* Vue globale */}
             {onglet === 'overview' && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -170,6 +296,31 @@ const AdminDashboard = () => {
                     </div>
                   ))}
                 </div>
+
+                {cniEnAttente.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-amber-800">
+                          {cniEnAttente.length} CNI en attente de verification
+                        </p>
+                        <p className="text-xs text-amber-600 mt-0.5">
+                          Des prestataires attendent la validation de leur identite
+                        </p>
+                      </div>
+                    </div>
+                    <button onClick={() => setOnglet('cni')}
+                      className="px-4 py-2 bg-amber-600 text-white text-xs font-semibold rounded-xl hover:bg-amber-700 transition-all ml-4 whitespace-nowrap">
+                      Verifier maintenant
+                    </button>
+                  </div>
+                )}
 
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
                   <div className="px-6 py-4 border-b border-gray-100">
@@ -199,6 +350,91 @@ const AdminDashboard = () => {
               </div>
             )}
 
+            {/* Verification CNI */}
+            {onglet === 'cni' && (
+              <div className="space-y-6">
+
+                {cniEnAttente.length > 0 && (
+                  <div>
+                    <h2 className="font-bold text-gray-900 text-sm mb-3 flex items-center gap-2">
+                      En attente de verification
+                      <span className="w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                        {cniEnAttente.length}
+                      </span>
+                    </h2>
+                    <div className="space-y-3">
+                      {cniEnAttente.map(p => (
+                        <div key={p.id}
+                          className="bg-white rounded-2xl border border-amber-200 shadow-card p-5 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <Avatar url={p.profile?.avatar_url} nom={p.profile?.nom} size="md" />
+                            <div>
+                              <p className="text-sm font-bold text-gray-900">{p.profile?.nom}</p>
+                              <p className="text-xs text-gray-400">{p.metier}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">{p.profile?.email}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 ml-4">
+                            <span className="text-xs px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full font-semibold">
+                              En attente
+                            </span>
+                            <button onClick={() => setCniModal(p)}
+                              className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
+                              Examiner la CNI
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {cniVerifies.length > 0 && (
+                  <div>
+                    <h2 className="font-bold text-gray-900 text-sm mb-3">Prestataires verifies ({cniVerifies.length})</h2>
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+                      <div className="divide-y divide-gray-50">
+                        {cniVerifies.map(p => (
+                          <div key={p.id} className="px-6 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Avatar url={p.profile?.avatar_url} nom={p.profile?.nom} size="sm" />
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">{p.profile?.nom}</p>
+                                <p className="text-xs text-gray-400">{p.metier} — {p.profile?.email}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 ml-4">
+                              <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full font-semibold">
+                                Verifie
+                              </span>
+                              <button onClick={() => setCniModal(p)}
+                                className="text-xs text-gray-400 hover:text-gray-900 font-medium transition-colors">
+                                Voir CNI
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {prestatairesNonVerifies.length === 0 && (
+                  <div className="text-center py-20">
+                    <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-900 font-semibold text-sm">Aucune CNI a verifier</p>
+                    <p className="text-gray-400 text-xs mt-1">Tous les prestataires ont ete traites</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Utilisateurs */}
             {onglet === 'users' && (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100">
@@ -235,6 +471,7 @@ const AdminDashboard = () => {
               </div>
             )}
 
+            {/* Missions */}
             {onglet === 'missions' && (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100">
@@ -262,9 +499,9 @@ const AdminDashboard = () => {
               </div>
             )}
 
+            {/* Partenaires */}
             {onglet === 'partenaires' && (
               <div className="space-y-4">
-
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-gray-400">{partenaires.length} partenaire{partenaires.length > 1 ? 's' : ''}</p>
                   <button onClick={() => setShowPartenaireForm(!showPartenaireForm)}

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import Avatar from '../../components/ui/Avatar'
+import VerifiedBadge from '../../components/ui/VerifiedBadge'
 
 const MonProfilPrestataire = () => {
   const { profile, fetchProfile } = useAuth()
@@ -73,11 +74,13 @@ const MonProfilPrestataire = () => {
         linkedin_url: form.linkedin_url || null,
       }).eq('id', profile?.id)
       if (prestError) throw prestError
+
       const { error: profileError } = await supabase.from('profiles').update({
         localisation: form.localisation,
         bio: form.bio,
       }).eq('id', profile?.id)
       if (profileError) throw profileError
+
       await fetchProfile(profile?.id)
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
@@ -208,9 +211,19 @@ const MonProfilPrestataire = () => {
                   </label>
                 </div>
                 <div>
-                  <p className="font-bold text-gray-900">{profile?.nom}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-gray-900">{profile?.nom}</p>
+                    {profil?.verifie_cni && <VerifiedBadge size="sm" />}
+                  </div>
                   <p className="text-xs text-gray-400 mt-0.5">{profile?.email}</p>
-                  <p className="text-xs text-gray-400 mt-2">Cliquez sur l icone pour changer la photo</p>
+                  {profil?.verifie_cni ? (
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <VerifiedBadge size="sm" />
+                      <span className="text-xs text-blue-600 font-semibold">Identite verifiee</span>
+                    </div>
+                  ) : profil?.cni_url ? (
+                    <p className="text-xs text-amber-600 font-medium mt-2">CNI en attente de verification</p>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -312,23 +325,28 @@ const MonProfilPrestataire = () => {
               <h2 className="font-bold text-gray-900 text-sm mb-1">Documents</h2>
               <p className="text-xs text-gray-400 mb-5">CNI pour verification, CV pour votre profil</p>
               <div className="space-y-4">
+
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">CNI</label>
-                    {profil?.verifie_cni && (
-                      <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full font-semibold">
-                        Verifie
-                      </span>
-                    )}
+                    {profil?.verifie_cni ? (
+                      <div className="flex items-center gap-1.5">
+                        <VerifiedBadge size="sm" />
+                        <span className="text-xs text-blue-600 font-semibold">Verifie</span>
+                      </div>
+                    ) : profil?.cni_url ? (
+                      <span className="text-xs text-amber-600 font-semibold">En attente de verification</span>
+                    ) : null}
                   </div>
+
                   {profil?.cni_url && (
                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200 mb-2">
                       <p className="text-xs text-gray-600 flex-1">CNI uploadee</p>
-                      {!profil?.verifie_cni && (
-                        <span className="text-xs text-amber-600 font-medium">En attente de verification</span>
-                      )}
+                      <a href={profil.cni_url} target="_blank" rel="noreferrer"
+                        className="text-xs text-gray-900 font-semibold hover:underline">Voir</a>
                     </div>
                   )}
+
                   <label className="flex items-center justify-center gap-2 w-full py-3.5 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-gray-900 transition-all">
                     <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />

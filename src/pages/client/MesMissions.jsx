@@ -25,11 +25,7 @@ const MesMissions = () => {
   const fetchMissions = async () => {
     const { data } = await supabase
       .from('missions')
-      .select(`
-        *,
-        categorie:categories(nom),
-        prestataire:profiles!missions_prestataire_id_fkey(id, nom, localisation, avatar_url)
-      `)
+      .select(`*, categorie:categories(nom), prestataire:profiles!missions_prestataire_id_fkey(id, nom, localisation, avatar_url)`)
       .eq('client_id', profile?.id)
       .order('created_at', { ascending: false })
     setMissions(data || [])
@@ -37,8 +33,7 @@ const MesMissions = () => {
   }
 
   const fetchAvisDejaLaisses = async () => {
-    const { data } = await supabase
-      .from('avis').select('mission_id').eq('auteur_id', profile?.id)
+    const { data } = await supabase.from('avis').select('mission_id').eq('auteur_id', profile?.id)
     setAvisDejaLaisses((data || []).map(a => a.mission_id))
   }
 
@@ -77,8 +72,7 @@ const MesMissions = () => {
       note: avisForm.note,
       commentaire: avisForm.commentaire,
     })
-    const { data: tousAvis } = await supabase
-      .from('avis').select('note').eq('prestataire_id', avisModal.prestataire_id)
+    const { data: tousAvis } = await supabase.from('avis').select('note').eq('prestataire_id', avisModal.prestataire_id)
     if (tousAvis) {
       const moyenne = tousAvis.reduce((acc, a) => acc + a.note, 0) / tousAvis.length
       await supabase.from('prestataires').update({
@@ -97,9 +91,9 @@ const MesMissions = () => {
     { key: 'tous', label: 'Toutes' },
     { key: 'en_attente', label: 'En attente' },
     { key: 'en_cours', label: 'En cours' },
-    { key: 'livre', label: 'Livrees' },
-    { key: 'valide', label: 'Validees' },
-    { key: 'annule', label: 'Annulees' },
+    { key: 'livre', label: 'Livrées' },
+    { key: 'valide', label: 'Validées' },
+    { key: 'annule', label: 'Annulées' },
   ]
 
   const missionsFiltrees = filtre === 'tous' ? missions : missions.filter(m => m.statut === filtre)
@@ -113,7 +107,7 @@ const MesMissions = () => {
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-modal">
             <h3 className="font-bold text-gray-900 text-lg mb-1">Laisser un avis</h3>
             <p className="text-xs text-gray-400 mb-6">
-              Evaluez votre experience avec {avisModal.prestataire?.nom}
+              Évaluez votre expérience avec {avisModal.prestataire?.nom}
             </p>
             <div className="mb-5">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Note</p>
@@ -132,13 +126,10 @@ const MesMissions = () => {
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                 Commentaire (optionnel)
               </p>
-              <textarea
-                value={avisForm.commentaire}
+              <textarea value={avisForm.commentaire}
                 onChange={(e) => setAvisForm({ ...avisForm, commentaire: e.target.value })}
-                rows={4}
-                placeholder="Decrivez votre experience..."
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 transition-all resize-none"
-              />
+                rows={4} placeholder="Décrivez votre expérience..."
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 transition-all resize-none" />
             </div>
             <div className="flex gap-3">
               <button onClick={() => setAvisModal(null)}
@@ -156,16 +147,16 @@ const MesMissions = () => {
 
       <Navbar />
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-10">
-        <div className="flex items-center justify-between mb-8">
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 md:px-6 py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Mes missions</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Mes missions</h1>
             <p className="text-gray-400 text-sm mt-1">
               {missions.length} mission{missions.length > 1 ? 's' : ''} au total
             </p>
           </div>
           <Link to="/client/creer-mission"
-            className="px-5 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-all shadow-card">
+            className="inline-flex px-5 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-all self-start sm:self-auto">
             + Nouvelle mission
           </Link>
         </div>
@@ -173,10 +164,8 @@ const MesMissions = () => {
         <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
           {filtres.map(f => (
             <button key={f.key} onClick={() => setFiltre(f.key)}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                filtre === f.key
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-400'
+              className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                filtre === f.key ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-400 shadow-card'
               }`}>
               {f.label}
             </button>
@@ -191,102 +180,101 @@ const MesMissions = () => {
           <div className="text-center py-20">
             <p className="text-gray-900 font-semibold text-sm mb-1">Aucune mission</p>
             <p className="text-gray-400 text-xs">
-              {filtre === 'tous' ? 'Creez votre premiere mission' : 'Aucune mission dans cette categorie'}
+              {filtre === 'tous' ? 'Créez votre première mission' : 'Aucune mission dans cette catégorie'}
             </p>
           </div>
         ) : (
           <div className="space-y-3">
             {missionsFiltrees.map((mission) => (
               <div key={mission.id}
-                className="bg-white rounded-2xl border border-gray-100 shadow-card hover:shadow-card-hover transition-all p-5">
+                className="bg-white rounded-2xl border border-gray-100 shadow-card hover:shadow-card-hover transition-all p-4 md:p-5">
 
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 mr-3">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="text-sm font-bold text-gray-900 truncate">{mission.titre}</h3>
                       <StatusBadge statut={mission.statut} />
-                      {mission.statut === 'en_attente' && mission.prestataire_id ? (
+                      {mission.statut === 'en_attente' && mission.prestataire_id && (
                         <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                          Candidature recue
+                          Candidature reçue
                         </span>
-                      ) : null}
+                      )}
                     </div>
-                    <p className="text-xs text-gray-400 line-clamp-2">{mission.description}</p>
+                    <p className="text-xs text-gray-400 line-clamp-1">{mission.description}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 text-xs text-gray-400 mb-4 flex-wrap">
+                <div className="flex items-center gap-2 text-xs text-gray-400 mb-4 flex-wrap">
                   <span className="font-medium text-gray-600">{mission.categorie?.nom}</span>
                   <span>·</span>
                   <span className="font-bold text-gray-900">{mission.budget?.toLocaleString()} FCFA</span>
-                  {mission.localisation ? <><span>·</span><span>{mission.localisation}</span></> : null}
-                  {mission.delai ? <><span>·</span><span>{mission.delai}</span></> : null}
+                  {mission.localisation && <><span>·</span><span>{mission.localisation}</span></>}
+                  {mission.delai && <><span>·</span><span>{mission.delai}</span></>}
                 </div>
 
-                {mission.prestataire ? (
+                {mission.prestataire && (
                   <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-xl">
                     <Avatar url={mission.prestataire.avatar_url} nom={mission.prestataire.nom} size="sm" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-900">{mission.prestataire.nom}</p>
-                      <p className="text-xs text-gray-400">{mission.prestataire.localisation}</p>
+                      <p className="text-xs font-semibold text-gray-900 truncate">{mission.prestataire.nom}</p>
+                      <p className="text-xs text-gray-400 truncate">{mission.prestataire.localisation}</p>
                     </div>
-                    {mission.statut === 'en_attente' ? (
-                      <span className="text-xs text-amber-600 font-medium">En attente de votre decision</span>
-                    ) : null}
+                    {mission.statut === 'en_attente' && (
+                      <span className="text-xs text-amber-600 font-medium hidden sm:block">En attente de décision</span>
+                    )}
                     <Link to={'/client/prestataire/' + mission.prestataire.id}
-                      className="text-xs text-gray-900 font-semibold hover:underline whitespace-nowrap">
+                      className="text-xs text-gray-900 font-semibold hover:underline whitespace-nowrap flex-shrink-0">
                       Voir profil
                     </Link>
                   </div>
-                ) : null}
+                )}
 
                 <div className="flex gap-2 flex-wrap">
-                  {mission.statut === 'en_attente' && mission.prestataire_id ? (
+                  {mission.statut === 'en_attente' && mission.prestataire_id && (
                     <>
                       <button onClick={() => handleAccepter(mission.id)}
-                        className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
+                        className="px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
                         Accepter
                       </button>
                       <button onClick={() => handleRefuser(mission.id)}
-                        className="px-4 py-2 border border-gray-200 text-gray-500 text-xs font-semibold rounded-xl hover:border-red-300 hover:text-red-500 transition-all">
+                        className="px-3 py-1.5 border border-gray-200 text-gray-500 text-xs font-semibold rounded-xl hover:border-red-300 hover:text-red-500 transition-all">
                         Refuser
                       </button>
                     </>
-                  ) : null}
-                  {mission.statut === 'en_attente' && !mission.prestataire_id ? (
+                  )}
+                  {mission.statut === 'en_attente' && !mission.prestataire_id && (
                     <button onClick={() => handleAnnuler(mission.id)}
-                      className="px-4 py-2 border border-gray-200 text-gray-500 text-xs font-semibold rounded-xl hover:border-red-300 hover:text-red-500 transition-all">
+                      className="px-3 py-1.5 border border-gray-200 text-gray-500 text-xs font-semibold rounded-xl hover:border-red-300 hover:text-red-500 transition-all">
                       Annuler
                     </button>
-                  ) : null}
-                  {mission.statut === 'livre' ? (
+                  )}
+                  {mission.statut === 'livre' && (
                     <>
                       <button onClick={() => handleValider(mission.id)}
-                        className="px-4 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-xl hover:bg-emerald-700 transition-all">
+                        className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-semibold rounded-xl hover:bg-emerald-700 transition-all">
                         Valider la livraison
                       </button>
                       <button onClick={() => handleContester(mission.id)}
-                        className="px-4 py-2 border border-red-200 text-red-500 text-xs font-semibold rounded-xl hover:bg-red-50 transition-all">
+                        className="px-3 py-1.5 border border-red-200 text-red-500 text-xs font-semibold rounded-xl hover:bg-red-50 transition-all">
                         Contester
                       </button>
                     </>
-                  ) : null}
-                  {mission.statut === 'valide' && mission.prestataire_id && !avisDejaLaisses.includes(mission.id) ? (
+                  )}
+                  {mission.statut === 'valide' && mission.prestataire_id && !avisDejaLaisses.includes(mission.id) && (
                     <button onClick={() => setAvisModal(mission)}
-                      className="px-4 py-2 border border-amber-300 text-amber-700 text-xs font-semibold rounded-xl hover:bg-amber-50 transition-all">
+                      className="px-3 py-1.5 border border-amber-300 text-amber-700 text-xs font-semibold rounded-xl hover:bg-amber-50 transition-all">
                       Laisser un avis
                     </button>
-                  ) : null}
-                  {mission.statut === 'valide' && avisDejaLaisses.includes(mission.id) ? (
-                    <span className="text-xs text-gray-400 py-2">Avis publie</span>
-                  ) : null}
+                  )}
+                  {mission.statut === 'valide' && avisDejaLaisses.includes(mission.id) && (
+                    <span className="text-xs text-gray-400 py-1.5">Avis publié</span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
       </main>
-
       <Footer />
     </div>
   )

@@ -16,53 +16,33 @@ const CreerMission = () => {
   const [success, setSuccess] = useState(false)
 
   const [form, setForm] = useState({
-    titre: '',
-    description: '',
-    categorie_id: '',
-    budget: '',
-    localisation: '',
-    delai: '',
+    titre: '', description: '', categorie_id: '', budget: '', localisation: '', delai: '',
   })
 
-  useEffect(() => {
-    fetchCategories()
-  }, [])
+  useEffect(() => { fetchCategories() }, [])
 
   const fetchCategories = async () => {
     const { data } = await supabase.from('categories').select('*')
     setCategories(data || [])
   }
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
-  }
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
-
     if (!form.titre || !form.description || !form.budget || !form.categorie_id) {
       setError('Veuillez remplir tous les champs obligatoires')
       setLoading(false)
       return
     }
-
     try {
-      const { error: missionError } = await supabase
-        .from('missions')
-        .insert({
-          titre: form.titre,
-          description: form.description,
-          categorie_id: form.categorie_id,
-          budget: parseFloat(form.budget),
-          localisation: form.localisation,
-          delai: form.delai,
-          client_id: profile?.id,
-          prestataire_id: prestataire_id || null,
-          statut: 'en_attente',
-        })
-
+      const { error: missionError } = await supabase.from('missions').insert({
+        titre: form.titre, description: form.description, categorie_id: form.categorie_id,
+        budget: parseFloat(form.budget), localisation: form.localisation, delai: form.delai,
+        client_id: profile?.id, prestataire_id: prestataire_id || null, statut: 'en_attente',
+      })
       if (missionError) throw missionError
       setSuccess(true)
       setTimeout(() => navigate('/client/missions'), 2000)
@@ -84,7 +64,7 @@ const CreerMission = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-1">Mission publiee</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Mission publiée !</h2>
             <p className="text-gray-400 text-sm">Redirection en cours...</p>
           </div>
         </div>
@@ -96,9 +76,7 @@ const CreerMission = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
-
-      <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-10">
-
+      <main className="flex-1 max-w-2xl mx-auto w-full px-4 md:px-6 py-8">
         <div className="mb-8">
           <button onClick={() => navigate(-1)}
             className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-900 transition-colors font-medium mb-4">
@@ -107,8 +85,8 @@ const CreerMission = () => {
             </svg>
             Retour
           </button>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Creer une mission</h1>
-          <p className="text-gray-400 text-sm mt-1">Decrivez votre besoin pour trouver le bon prestataire</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Créer une mission</h1>
+          <p className="text-gray-400 text-sm mt-1">Décrivez votre besoin pour trouver le bon prestataire</p>
         </div>
 
         {error && (
@@ -117,101 +95,58 @@ const CreerMission = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-card p-6 space-y-6">
-
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6 space-y-5">
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
               Titre de la mission *
             </label>
-            <input
-              type="text"
-              name="titre"
-              value={form.titre}
-              onChange={handleChange}
-              placeholder="Ex: Creation d un site web vitrine"
-              className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white"
-            />
+            <input type="text" name="titre" value={form.titre} onChange={handleChange}
+              placeholder="Ex: Création d'un site web vitrine"
+              className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-              Description detaillee *
+              Description détaillée *
             </label>
-            <textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              rows={5}
-              placeholder="Decrivez precisement votre besoin, les livrables attendus, les contraintes..."
-              className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white resize-none"
-            />
+            <textarea name="description" value={form.description} onChange={handleChange} rows={5}
+              placeholder="Décrivez précisément votre besoin, les livrables attendus, les contraintes..."
+              className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white resize-none" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Categorie *
-              </label>
-              <select
-                name="categorie_id"
-                value={form.categorie_id}
-                onChange={handleChange}
-                className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white"
-              >
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Catégorie *</label>
+              <select name="categorie_id" value={form.categorie_id} onChange={handleChange}
+                className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white">
                 <option value="">Choisir...</option>
-                {categories.map(c => (
-                  <option key={c.id} value={c.id}>{c.nom}</option>
-                ))}
+                {categories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Budget (FCFA) *
-              </label>
-              <input
-                type="number"
-                name="budget"
-                value={form.budget}
-                onChange={handleChange}
-                placeholder="50000"
-                className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white"
-              />
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Budget (FCFA) *</label>
+              <input type="number" name="budget" value={form.budget} onChange={handleChange} placeholder="50000"
+                className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Localisation
-              </label>
-              <input
-                type="text"
-                name="localisation"
-                value={form.localisation}
-                onChange={handleChange}
-                placeholder="Dakar, Plateau"
-                className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white"
-              />
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Localisation</label>
+              <input type="text" name="localisation" value={form.localisation} onChange={handleChange} placeholder="Dakar, Plateau"
+                className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Delai souhaite
-              </label>
-              <input
-                type="text"
-                name="delai"
-                value={form.delai}
-                onChange={handleChange}
-                placeholder="Ex: 1 semaine"
-                className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white"
-              />
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Délai souhaité</label>
+              <input type="text" name="delai" value={form.delai} onChange={handleChange} placeholder="Ex: 1 semaine"
+                className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
             </div>
           </div>
 
           {prestataire_id && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
               <p className="text-xs text-blue-700 font-medium">
-                Cette mission sera assignee directement au prestataire selectionne
+                Cette mission sera assignée directement au prestataire sélectionné
               </p>
             </div>
           )}
@@ -228,7 +163,6 @@ const CreerMission = () => {
           </div>
         </form>
       </main>
-
       <Footer />
     </div>
   )

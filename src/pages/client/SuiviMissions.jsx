@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import Navbar from '../../components/layout/Navbar'
@@ -10,11 +10,11 @@ import StarRating from '../../components/ui/StarRating'
 
 const SuiviMissions = () => {
   const { profile } = useAuth()
-  const navigate = useNavigate()
   const [missions, setMissions] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [filtre, setFiltre] = useState('tous')
+  const [showDetail, setShowDetail] = useState(false)
 
   useEffect(() => { fetchMissions() }, [])
 
@@ -82,22 +82,27 @@ const SuiviMissions = () => {
 
   const missionsFiltrees = filtre === 'tous' ? missions : missions.filter(m => m.statut === filtre)
 
+  const handleSelectMission = (mission) => {
+    setSelected(mission)
+    setShowDetail(true)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
 
-      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-10">
+      <main className="flex-1 max-w-6xl mx-auto w-full px-4 md:px-6 py-8">
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Suivi des missions</h1>
+        <div className="mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Suivi des missions</h1>
           <p className="text-gray-400 text-sm mt-1">Suivez l avancement de toutes vos missions en detail</p>
         </div>
 
         <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
           {filtres.map(f => (
             <button key={f.key} onClick={() => setFiltre(f.key)}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                filtre === f.key ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-400'
+              className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                filtre === f.key ? 'bg-gray-900 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-400 shadow-card'
               }`}>
               {f.label}
             </button>
@@ -116,19 +121,24 @@ const SuiviMissions = () => {
             </Link>
           </div>
         ) : (
-          <div className="flex gap-6">
+          <div className="flex flex-col md:flex-row gap-4">
 
-            <div className="w-72 flex-shrink-0 space-y-2">
+            {/* Liste missions — cachée sur mobile si detail ouvert */}
+            <div className={`${showDetail ? 'hidden md:block' : 'block'} w-full md:w-72 flex-shrink-0 space-y-2`}>
               {missionsFiltrees.map(mission => (
-                <button key={mission.id} onClick={() => setSelected(mission)}
+                <button key={mission.id} onClick={() => handleSelectMission(mission)}
                   className={`w-full p-4 rounded-2xl border text-left transition-all ${
-                    selected?.id === mission.id ? 'border-gray-900 bg-gray-900' : 'border-gray-100 bg-white hover:border-gray-300 shadow-card'
+                    selected?.id === mission.id && showDetail
+                      ? 'border-gray-900 bg-gray-900'
+                      : 'border-gray-100 bg-white hover:border-gray-300 shadow-card'
                   }`}>
-                  <p className={`text-sm font-semibold truncate mb-1.5 ${selected?.id === mission.id ? 'text-white' : 'text-gray-900'}`}>
+                  <p className={`text-sm font-semibold truncate mb-1.5 ${
+                    selected?.id === mission.id && showDetail ? 'text-white' : 'text-gray-900'
+                  }`}>
                     {mission.titre}
                   </p>
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs ${selected?.id === mission.id ? 'text-gray-400' : 'text-gray-400'}`}>
+                    <span className={`text-xs ${selected?.id === mission.id && showDetail ? 'text-gray-400' : 'text-gray-400'}`}>
                       {mission.budget?.toLocaleString()} FCFA
                     </span>
                     <StatusBadge statut={mission.statut} />
@@ -137,13 +147,23 @@ const SuiviMissions = () => {
               ))}
             </div>
 
-            {selected ? (
-              <div className="flex-1 space-y-4">
+            {/* Detail mission */}
+            {selected && (showDetail || window.innerWidth >= 768) && (
+              <div className={`${showDetail ? 'block' : 'hidden md:block'} flex-1 space-y-4`}>
 
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
-                  <div className="flex items-start justify-between mb-4">
+                {/* Bouton retour mobile */}
+                <button onClick={() => setShowDetail(false)}
+                  className="md:hidden flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-900 font-medium mb-2">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Retour aux missions
+                </button>
+
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5">
+                  <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
                     <div>
-                      <h2 className="text-lg font-bold text-gray-900 mb-1">{selected.titre}</h2>
+                      <h2 className="text-base md:text-lg font-bold text-gray-900 mb-1">{selected.titre}</h2>
                       <p className="text-xs text-gray-400">
                         Creee le {new Date(selected.created_at).toLocaleDateString('fr-FR', {
                           day: 'numeric', month: 'long', year: 'numeric'
@@ -155,7 +175,7 @@ const SuiviMissions = () => {
 
                   <p className="text-sm text-gray-600 leading-relaxed mb-5">{selected.description}</p>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     {[
                       { label: 'Budget', value: selected.budget?.toLocaleString() + ' FCFA' },
                       { label: 'Categorie', value: selected.categorie?.nom || '—' },
@@ -170,10 +190,10 @@ const SuiviMissions = () => {
                   </div>
                 </div>
 
-                {selected.prestataire ? (
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
+                {selected.prestataire && (
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5">
                     <h3 className="font-bold text-gray-900 text-sm mb-4">Prestataire</h3>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
                       <div className="flex items-center gap-3">
                         <Avatar url={selected.prestataire.avatar_url} nom={selected.prestataire.nom} size="md" />
                         <div>
@@ -181,21 +201,21 @@ const SuiviMissions = () => {
                           <p className="text-xs text-gray-400">{selected.prestataire.localisation}</p>
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         <Link to={'/client/prestataire/' + selected.prestataire.id}
                           className="px-3 py-1.5 border border-gray-200 text-gray-600 text-xs font-semibold rounded-xl hover:border-gray-900 transition-all">
                           Voir profil
                         </Link>
                         <Link to="/client/messages"
                           className="px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
-                          Envoyer message
+                          Message
                         </Link>
                       </div>
                     </div>
                   </div>
-                ) : null}
+                )}
 
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5">
                   <h3 className="font-bold text-gray-900 text-sm mb-6">Timeline</h3>
                   <div className="space-y-0">
                     {getTimeline(selected).map((step, i, arr) => (
@@ -218,30 +238,23 @@ const SuiviMissions = () => {
                               <div className="w-2 h-2 rounded-full bg-gray-300" />
                             )}
                           </div>
-                          {i < arr.length - 1 ? (
+                          {i < arr.length - 1 && (
                             <div className={`w-0.5 h-10 mt-1 ${step.done ? 'bg-gray-900' : 'bg-gray-200'}`} />
-                          ) : null}
+                          )}
                         </div>
-                        <div className="pb-10 flex-1">
+                        <div className="pb-10 flex-1 min-w-0">
                           <p className={`text-sm font-semibold ${step.isError ? 'text-red-600' : step.done ? 'text-gray-900' : 'text-gray-300'}`}>
                             {step.label}
                           </p>
                           <p className="text-xs text-gray-400 mt-0.5">{step.desc}</p>
-                          {step.date ? (
-                            <p className="text-xs text-gray-300 mt-1">
-                              {new Date(step.date).toLocaleDateString('fr-FR', {
-                                day: 'numeric', month: 'long', year: 'numeric'
-                              })}
-                            </p>
-                          ) : null}
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {selected.avis && selected.avis.length > 0 ? (
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-6">
+                {selected.avis && selected.avis.length > 0 && (
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5">
                     <h3 className="font-bold text-gray-900 text-sm mb-4">Votre avis</h3>
                     {selected.avis.map((a, i) => (
                       <div key={i} className="p-4 bg-gray-50 rounded-xl">
@@ -249,28 +262,26 @@ const SuiviMissions = () => {
                           <StarRating note={a.note} size="sm" />
                           <span className="text-xs text-gray-500 font-semibold">{a.note}/5</span>
                         </div>
-                        {a.commentaire ? (
-                          <p className="text-sm text-gray-600">{a.commentaire}</p>
-                        ) : null}
+                        {a.commentaire && <p className="text-sm text-gray-600">{a.commentaire}</p>}
                       </div>
                     ))}
                   </div>
-                ) : null}
+                )}
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap pb-4">
                   <Link to="/client/missions"
                     className="px-4 py-2 border border-gray-200 text-gray-600 text-xs font-semibold rounded-xl hover:border-gray-900 transition-all">
                     Voir toutes les missions
                   </Link>
-                  {['en_attente', 'en_cours'].includes(selected.statut) ? (
+                  {['en_attente', 'en_cours'].includes(selected.statut) && (
                     <Link to="/client/messages"
                       className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
                       Contacter le prestataire
                     </Link>
-                  ) : null}
+                  )}
                 </div>
               </div>
-            ) : null}
+            )}
           </div>
         )}
       </main>
