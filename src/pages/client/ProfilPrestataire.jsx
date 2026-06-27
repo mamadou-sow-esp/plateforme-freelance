@@ -15,21 +15,55 @@ const ProfilPrestataire = () => {
   const [prestataire, setPrestataire] = useState(null)
   const [profilData, setProfilData] = useState(null)
   const [avis, setAvis] = useState([])
+  const [statsReelles, setStatsReelles] = useState({ nb_missions: 0, note_moyenne: 0 })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { fetchData() }, [id])
 
   const fetchData = async () => {
-    const { data: profileData } = await supabase.from('profiles').select('*').eq('id', id).single()
-    const { data: prestData } = await supabase.from('prestataires').select('*').eq('id', id).single()
+    // Profil de base
+    const { data: profileData } = await supabase
+      .from('profiles').select('*').eq('id', id).single()
+
+    // Profil prestataire
+    const { data: prestData } = await supabase
+      .from('prestataires').select('*').eq('id', id).single()
+
+    // Avis reçus
     const { data: avisData } = await supabase
       .from('avis')
       .select('*, auteur:profiles!avis_auteur_id_fkey(nom, avatar_url)')
       .eq('prestataire_id', id)
       .order('created_at', { ascending: false })
+
+    // Stats réelles calculées depuis les missions (pas depuis la table prestataires)
+    const { count: nbMissions } = await supabase
+      .from('missions')
+      .select('*', { count: 'exact', head: true })
+      .eq('prestataire_id', id)
+      .eq('statut', 'valide')
+
+    const avisListe = avisData || []
+    const noteMoyenne = avisListe.length > 0
+      ? avisListe.reduce((acc, a) => acc + a.note, 0) / avisListe.length
+      : 0
+
     setPrestataire(profileData)
     setProfilData(prestData)
-    setAvis(avisData || [])
+    setAvis(avisListe)
+    setStatsReelles({
+      nb_missions: nbMissions || 0,
+      note_moyenne: Math.round(noteMoyenne * 10) / 10,
+    })
+
+    // Synchronise aussi la table prestataires avec les vraies valeurs
+    if (prestData) {
+      await supabase.from('prestataires').update({
+        nb_missions: nbMissions || 0,
+        note_moyenne: Math.round(noteMoyenne * 10) / 10,
+      }).eq('id', id)
+    }
+
     setLoading(false)
   }
 
@@ -69,7 +103,9 @@ const ProfilPrestataire = () => {
         <div className="flex-1 flex items-center justify-center text-center">
           <div>
             <p className="text-gray-900 font-semibold text-sm mb-2">Prestataire introuvable</p>
-            <Link to="/client/rechercher" className="text-xs text-gray-400 hover:text-gray-900">Retour à la recherche</Link>
+            <Link to="/client/rechercher" className="text-xs text-gray-400 hover:text-gray-900">
+              Retour à la recherche
+            </Link>
           </div>
         </div>
         <Footer />
@@ -94,6 +130,7 @@ const ProfilPrestataire = () => {
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6 mb-4">
 
+          {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
             <div className="flex items-center gap-4">
               <Avatar url={prestataire.avatar_url} nom={prestataire.nom} size="lg" />
@@ -104,11 +141,11 @@ const ProfilPrestataire = () => {
                 </div>
                 <p className="text-sm text-gray-500 mt-0.5">{profilData.metier}</p>
                 <p className="text-xs text-gray-400 mt-0.5">{prestataire.localisation}</p>
-                {profilData.note_moyenne > 0 && (
+                {statsReelles.note_moyenne > 0 && (
                   <div className="flex items-center gap-2 mt-2">
-                    <StarRating note={Math.round(profilData.note_moyenne)} size="sm" />
+                    <StarRating note={Math.round(statsReelles.note_moyenne)} size="sm" />
                     <span className="text-xs text-gray-500 font-medium">
-                      {profilData.note_moyenne}/5 ({avis.length} avis)
+                      {statsReelles.note_moyenne}/5 ({avis.length} avis)
                     </span>
                   </div>
                 )}
@@ -122,6 +159,7 @@ const ProfilPrestataire = () => {
             </div>
           </div>
 
+          {/* Bio */}
           {prestataire.bio && (
             <div className="mb-6">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">À propos</p>
@@ -129,14 +167,15 @@ const ProfilPrestataire = () => {
             </div>
           )}
 
+          {/* Stats — calculées en temps réel */}
           <div className="grid grid-cols-3 gap-3 p-4 bg-gray-50 rounded-xl mb-6">
             <div className="text-center">
-              <p className="text-xl md:text-2xl font-bold text-gray-900">{profilData.nb_missions}</p>
+              <p className="text-xl md:text-2xl font-bold text-gray-900">{statsReelles.nb_missions}</p>
               <p className="text-xs text-gray-400 mt-0.5">Missions</p>
             </div>
             <div className="text-center border-x border-gray-200">
               <p className="text-xl md:text-2xl font-bold text-gray-900">
-                {profilData.note_moyenne > 0 ? profilData.note_moyenne + '/5' : 'Nouveau'}
+                {statsReelles.note_moyenne > 0 ? statsReelles.note_moyenne + '/5' : 'Nouveau'}
               </p>
               <p className="text-xs text-gray-400 mt-0.5">Note</p>
             </div>
@@ -146,25 +185,25 @@ const ProfilPrestataire = () => {
             </div>
           </div>
 
+          {/* Prix + CTA */}
           <div className="p-4 border border-gray-100 rounded-xl mb-6">
             <p className="text-xs text-gray-400 mb-1">Fourchette de prix</p>
             <p className="text-base font-bold text-gray-900 mb-4">
               {profilData.prix_min?.toLocaleString()} — {profilData.prix_max?.toLocaleString()} FCFA
             </p>
             <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={handleEnvoyerMessage}
+              <button onClick={handleEnvoyerMessage}
                 className="flex-1 py-2.5 text-center border border-gray-200 text-gray-700 text-xs font-semibold rounded-xl hover:border-gray-900 hover:text-gray-900 transition-all">
                 Envoyer un message
               </button>
-              <button
-                onClick={() => navigate('/client/creer-mission?prestataire=' + id)}
+              <button onClick={() => navigate('/client/creer-mission?prestataire=' + id)}
                 className="flex-1 py-2.5 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
                 Assigner une mission
               </button>
             </div>
           </div>
 
+          {/* Compétences */}
           {profilData.competences && profilData.competences.length > 0 && (
             <div className="mb-6">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Compétences</p>
@@ -176,6 +215,7 @@ const ProfilPrestataire = () => {
             </div>
           )}
 
+          {/* Liens */}
           {hasLinks && (
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Liens</p>
@@ -209,6 +249,7 @@ const ProfilPrestataire = () => {
           )}
         </div>
 
+        {/* Avis */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6">
           <h2 className="font-bold text-gray-900 text-base mb-5">Avis clients ({avis.length})</h2>
           {avis.length === 0 ? (
@@ -226,10 +267,14 @@ const ProfilPrestataire = () => {
                       <StarRating note={a.note} size="sm" />
                     </div>
                     <span className="text-xs text-gray-400 flex-shrink-0">
-                      {new Date(a.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {new Date(a.created_at).toLocaleDateString('fr-FR', {
+                        day: 'numeric', month: 'short', year: 'numeric'
+                      })}
                     </span>
                   </div>
-                  {a.commentaire && <p className="text-sm text-gray-600 leading-relaxed">{a.commentaire}</p>}
+                  {a.commentaire && (
+                    <p className="text-sm text-gray-600 leading-relaxed">{a.commentaire}</p>
+                  )}
                 </div>
               ))}
             </div>
