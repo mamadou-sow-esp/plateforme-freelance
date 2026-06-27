@@ -37,7 +37,7 @@ const Footer = () => {
                   <img
                     src={p.logo_url}
                     alt={p.nom}
-                    className="h-14 w-auto object-contain filter-none opacity-100 group-hover:scale-110 transition-all duration-300"
+                    className="h-10 w-auto object-contain filter-none opacity-100 group-hover:scale-110 transition-all duration-300"
                     style={{ maxWidth: '140px' }}
                   />
                 ) : (
