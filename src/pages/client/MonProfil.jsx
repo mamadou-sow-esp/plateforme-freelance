@@ -9,9 +9,11 @@ const MonProfilClient = () => {
   const { profile } = useAuth()
   const [loading, setLoading] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [detectingLocation, setDetectingLocation] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [avatarUrl, setAvatarUrl] = useState(null)
+  const [locationSaved, setLocationSaved] = useState(false)
   const [form, setForm] = useState({
     nom: '', telephone: '', localisation: '', bio: ''
   })
@@ -29,6 +31,7 @@ const MonProfilClient = () => {
 
     if (data) {
       setAvatarUrl(data.avatar_url)
+      setLocationSaved(!!(data.latitude && data.longitude))
       setForm({
         nom: data.nom || '',
         telephone: data.telephone || '',
@@ -54,9 +57,7 @@ const MonProfilClient = () => {
           bio: form.bio,
         })
         .eq('id', profile?.id)
-
       if (profileError) throw profileError
-
       await fetchProfileData()
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
@@ -65,6 +66,53 @@ const MonProfilClient = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleDetecterPosition = () => {
+    if (!navigator.geolocation) {
+      setError('Géolocalisation non supportée par votre navigateur')
+      return
+    }
+    setDetectingLocation(true)
+    setError('')
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude, accuracy } = pos.coords
+        try {
+          const { error: geoError } = await supabase
+            .from('profiles')
+            .update({ latitude, longitude })
+            .eq('id', profile?.id)
+          if (geoError) throw geoError
+          setLocationSaved(true)
+          setSuccess(true)
+          setDetectingLocation(false)
+          setTimeout(() => setSuccess(false), 3000)
+        } catch (err) {
+          setError('Erreur lors de la sauvegarde de la position')
+          setDetectingLocation(false)
+        }
+      },
+      (err) => {
+        setDetectingLocation(false)
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            setError('Permission refusée. Activez la localisation dans les paramètres.')
+            break
+          default:
+            setError('Impossible de détecter votre position. Réessayez.')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
+  const handleSupprimerPosition = async () => {
+    await supabase.from('profiles')
+      .update({ latitude: null, longitude: null })
+      .eq('id', profile?.id)
+    setLocationSaved(false)
   }
 
   const handleUploadAvatar = async (e) => {
@@ -76,8 +124,7 @@ const MonProfilClient = () => {
       const ext = file.name.split('.').pop()
       const fileName = profile?.id + '/avatar.' + ext
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file, { upsert: true })
+        .from('avatars').upload(fileName, file, { upsert: true })
       if (uploadError) throw uploadError
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName)
       await supabase.from('profiles')
@@ -175,7 +222,7 @@ const MonProfilClient = () => {
                   className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Localisation</label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Localisation (texte)</label>
                 <input type="text" name="localisation" value={form.localisation} onChange={handleChange}
                   placeholder="Dakar, Plateau"
                   className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
@@ -187,6 +234,58 @@ const MonProfilClient = () => {
                   className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white resize-none" />
               </div>
             </div>
+          </div>
+
+          {/* Géolocalisation */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6">
+            <h2 className="font-bold text-gray-900 text-sm mb-1">Ma position GPS</h2>
+            <p className="text-xs text-gray-400 mb-5">
+              Permet aux prestataires de vous trouver plus facilement selon votre localisation réelle
+            </p>
+
+            {locationSaved ? (
+              <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-emerald-800">Position enregistrée ✓</p>
+                    <p className="text-xs text-emerald-600 mt-0.5">Votre position GPS est sauvegardée</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 ml-4">
+                  <button onClick={handleDetecterPosition} disabled={detectingLocation}
+                    className="px-3 py-1.5 border border-emerald-300 text-emerald-700 text-xs font-semibold rounded-xl hover:bg-emerald-100 transition-all disabled:opacity-40">
+                    {detectingLocation ? 'Détection...' : 'Mettre à jour'}
+                  </button>
+                  <button onClick={handleSupprimerPosition}
+                    className="px-3 py-1.5 border border-gray-200 text-gray-500 text-xs font-semibold rounded-xl hover:border-red-300 hover:text-red-500 transition-all">
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={handleDetecterPosition} disabled={detectingLocation}
+                className="w-full flex items-center justify-center gap-2 py-3.5 border-2 border-dashed border-gray-200 rounded-xl hover:border-gray-900 transition-all disabled:opacity-40">
+                {detectingLocation ? (
+                  <div className="w-4 h-4 border-2 border-gray-400 border-t-gray-900 rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                )}
+                <span className="text-sm font-semibold text-gray-600">
+                  {detectingLocation ? 'Détection en cours...' : 'Détecter ma position'}
+                </span>
+              </button>
+            )}
           </div>
 
           {/* Accès rapide */}

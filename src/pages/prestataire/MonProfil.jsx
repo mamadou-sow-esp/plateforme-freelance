@@ -13,41 +13,30 @@ const MonProfilPrestataire = () => {
   const [uploading, setUploading] = useState(false)
   const [uploadingCV, setUploadingCV] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [detectingLocation, setDetectingLocation] = useState(false)
+  const [locationSaved, setLocationSaved] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [avatarUrl, setAvatarUrl] = useState(null)
 
   const [form, setForm] = useState({
-    metier: '',
-    competences: '',
-    prix_min: '',
-    prix_max: '',
-    disponible: true,
-    localisation: '',
-    bio: '',
-    github_url: '',
-    portfolio_url: '',
-    linkedin_url: '',
+    metier: '', competences: '', prix_min: '', prix_max: '',
+    disponible: true, localisation: '', bio: '',
+    github_url: '', portfolio_url: '', linkedin_url: '',
   })
 
   useEffect(() => { if (profile?.id) fetchData() }, [profile?.id])
 
   const fetchData = async () => {
-    // Récupère profil de base
     const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', profile?.id)
-      .single()
-
-    // Récupère profil prestataire
+      .from('profiles').select('*').eq('id', profile?.id).single()
     const { data: prestData } = await supabase
-      .from('prestataires')
-      .select('*')
-      .eq('id', profile?.id)
-      .single()
+      .from('prestataires').select('*').eq('id', profile?.id).single()
 
-    if (profileData) setAvatarUrl(profileData.avatar_url)
+    if (profileData) {
+      setAvatarUrl(profileData.avatar_url)
+      setLocationSaved(!!(profileData.latitude && profileData.longitude))
+    }
 
     if (prestData) {
       setProfil(prestData)
@@ -77,40 +66,26 @@ const MonProfilPrestataire = () => {
     setError('')
     setSuccess(false)
     try {
-      const competencesArray = form.competences
-        .split(',')
-        .map(c => c.trim())
-        .filter(c => c !== '')
+      const competencesArray = form.competences.split(',').map(c => c.trim()).filter(c => c !== '')
 
-      // Met à jour la table prestataires
-      const { error: prestError } = await supabase
-        .from('prestataires')
-        .update({
-          metier: form.metier,
-          competences: competencesArray,
-          prix_min: parseFloat(form.prix_min) || 0,
-          prix_max: parseFloat(form.prix_max) || 0,
-          disponible: form.disponible,
-          github_url: form.github_url || null,
-          portfolio_url: form.portfolio_url || null,
-          linkedin_url: form.linkedin_url || null,
-        })
-        .eq('id', profile?.id)
-
+      const { error: prestError } = await supabase.from('prestataires').update({
+        metier: form.metier,
+        competences: competencesArray,
+        prix_min: parseFloat(form.prix_min) || 0,
+        prix_max: parseFloat(form.prix_max) || 0,
+        disponible: form.disponible,
+        github_url: form.github_url || null,
+        portfolio_url: form.portfolio_url || null,
+        linkedin_url: form.linkedin_url || null,
+      }).eq('id', profile?.id)
       if (prestError) throw prestError
 
-      // Met à jour la table profiles
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          localisation: form.localisation,
-          bio: form.bio,
-        })
-        .eq('id', profile?.id)
-
+      const { error: profileError } = await supabase.from('profiles').update({
+        localisation: form.localisation,
+        bio: form.bio,
+      }).eq('id', profile?.id)
       if (profileError) throw profileError
 
-      // Recharge les données localement sans dépendre de fetchProfile
       await fetchData()
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
@@ -121,6 +96,53 @@ const MonProfilPrestataire = () => {
     }
   }
 
+  const handleDetecterPosition = () => {
+    if (!navigator.geolocation) {
+      setError('Géolocalisation non supportée par votre navigateur')
+      return
+    }
+    setDetectingLocation(true)
+    setError('')
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords
+        try {
+          const { error: geoError } = await supabase
+            .from('profiles')
+            .update({ latitude, longitude })
+            .eq('id', profile?.id)
+          if (geoError) throw geoError
+          setLocationSaved(true)
+          setDetectingLocation(false)
+          setSuccess(true)
+          setTimeout(() => setSuccess(false), 3000)
+        } catch (err) {
+          setError('Erreur lors de la sauvegarde de la position')
+          setDetectingLocation(false)
+        }
+      },
+      (err) => {
+        setDetectingLocation(false)
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            setError('Permission refusée. Activez la localisation dans les paramètres.')
+            break
+          default:
+            setError('Impossible de détecter votre position. Réessayez.')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
+  const handleSupprimerPosition = async () => {
+    await supabase.from('profiles')
+      .update({ latitude: null, longitude: null })
+      .eq('id', profile?.id)
+    setLocationSaved(false)
+  }
+
   const handleUploadAvatar = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -129,13 +151,10 @@ const MonProfilPrestataire = () => {
       const ext = file.name.split('.').pop()
       const fileName = profile?.id + '/avatar.' + ext
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file, { upsert: true })
+        .from('avatars').upload(fileName, file, { upsert: true })
       if (uploadError) throw uploadError
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName)
-      await supabase.from('profiles')
-        .update({ avatar_url: urlData.publicUrl })
-        .eq('id', profile?.id)
+      await supabase.from('profiles').update({ avatar_url: urlData.publicUrl }).eq('id', profile?.id)
       setAvatarUrl(urlData.publicUrl)
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
@@ -154,8 +173,7 @@ const MonProfilPrestataire = () => {
       const ext = file.name.split('.').pop()
       const fileName = 'cni_' + profile?.id + '.' + ext
       const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(fileName, file, { upsert: true })
+        .from('documents').upload(fileName, file, { upsert: true })
       if (uploadError) throw uploadError
       const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName)
       await supabase.from('prestataires')
@@ -179,13 +197,10 @@ const MonProfilPrestataire = () => {
       const ext = file.name.split('.').pop()
       const fileName = 'cv_' + profile?.id + '.' + ext
       const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(fileName, file, { upsert: true })
+        .from('documents').upload(fileName, file, { upsert: true })
       if (uploadError) throw uploadError
       const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName)
-      await supabase.from('prestataires')
-        .update({ cv_url: urlData.publicUrl })
-        .eq('id', profile?.id)
+      await supabase.from('prestataires').update({ cv_url: urlData.publicUrl }).eq('id', profile?.id)
       await fetchData()
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
@@ -275,7 +290,7 @@ const MonProfilPrestataire = () => {
               <h2 className="font-bold text-gray-900 text-sm mb-5">Informations personnelles</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Localisation</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Localisation (texte)</label>
                   <input type="text" name="localisation" value={form.localisation} onChange={handleChange}
                     placeholder="Dakar, Plateau"
                     className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
@@ -287,6 +302,58 @@ const MonProfilPrestataire = () => {
                     className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white resize-none" />
                 </div>
               </div>
+            </div>
+
+            {/* Position GPS */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6">
+              <h2 className="font-bold text-gray-900 text-sm mb-1">Ma position GPS</h2>
+              <p className="text-xs text-gray-400 mb-5">
+                Permet aux clients de vous trouver via le filtre "Près de moi"
+              </p>
+
+              {locationSaved ? (
+                <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-emerald-800">Position enregistrée ✓</p>
+                      <p className="text-xs text-emerald-600 mt-0.5">Les clients peuvent vous trouver par proximité</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 ml-4 flex-shrink-0">
+                    <button onClick={handleDetecterPosition} disabled={detectingLocation}
+                      className="px-3 py-1.5 border border-emerald-300 text-emerald-700 text-xs font-semibold rounded-xl hover:bg-emerald-100 transition-all disabled:opacity-40">
+                      {detectingLocation ? 'Détection...' : 'Mettre à jour'}
+                    </button>
+                    <button onClick={handleSupprimerPosition}
+                      className="px-3 py-1.5 border border-gray-200 text-gray-500 text-xs font-semibold rounded-xl hover:border-red-300 hover:text-red-500 transition-all">
+                      Supprimer
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={handleDetecterPosition} disabled={detectingLocation}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 border-2 border-dashed border-gray-200 rounded-xl hover:border-gray-900 transition-all disabled:opacity-40">
+                  {detectingLocation ? (
+                    <div className="w-4 h-4 border-2 border-gray-400 border-t-gray-900 rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  )}
+                  <span className="text-sm font-semibold text-gray-600">
+                    {detectingLocation ? 'Détection en cours...' : 'Détecter ma position'}
+                  </span>
+                </button>
+              )}
             </div>
 
             {/* Services */}
@@ -380,7 +447,7 @@ const MonProfilPrestataire = () => {
                         <span className="text-xs text-blue-600 font-semibold">Vérifiée</span>
                       </div>
                     ) : profil?.cni_url ? (
-                      <span className="text-xs text-amber-600 font-semibold">En attente de vérification</span>
+                      <span className="text-xs text-amber-600 font-semibold">En attente</span>
                     ) : null}
                   </div>
                   {profil?.cni_url && (
@@ -396,7 +463,7 @@ const MonProfilPrestataire = () => {
                         d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
                     <span className="text-xs text-gray-500 font-medium">
-                      {uploading ? 'Upload en cours...' : profil?.cni_url ? 'Remplacer la CNI' : 'Uploader la CNI'}
+                      {uploading ? 'Upload...' : profil?.cni_url ? 'Remplacer la CNI' : 'Uploader la CNI'}
                     </span>
                     <input type="file" accept="image/*,.pdf" onChange={handleUploadCNI} className="hidden" disabled={uploading} />
                   </label>
@@ -417,7 +484,7 @@ const MonProfilPrestataire = () => {
                         d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
                     <span className="text-xs text-gray-500 font-medium">
-                      {uploadingCV ? 'Upload en cours...' : profil?.cv_url ? 'Remplacer le CV' : 'Uploader le CV (PDF)'}
+                      {uploadingCV ? 'Upload...' : profil?.cv_url ? 'Remplacer le CV' : 'Uploader le CV (PDF)'}
                     </span>
                     <input type="file" accept=".pdf" onChange={handleUploadCV} className="hidden" disabled={uploadingCV} />
                   </label>
