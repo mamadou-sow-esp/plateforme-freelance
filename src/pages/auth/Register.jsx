@@ -48,7 +48,6 @@ const Register = () => {
       setError('Le mot de passe doit contenir au moins 6 caractères')
       return
     }
-
     if (form.password !== form.confirmPassword) {
       setError('Les mots de passe ne correspondent pas')
       return
@@ -57,38 +56,57 @@ const Register = () => {
     setLoading(true)
 
     try {
+      // 1. Créer le compte auth
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
       })
 
       if (signUpError) throw signUpError
+      if (!data.user) throw new Error("Erreur lors de la création du compte")
 
-      if (data.user) {
-        const { error: profileError } = await supabase.from('profiles').insert({
-          id: data.user.id,
+      const userId = data.user.id
+
+      // 2. Créer le profil de base
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
           nom: form.nom,
           email: form.email,
           telephone: form.telephone,
           role: form.role,
         })
 
-        if (profileError) throw profileError
+      if (profileError) throw profileError
 
-        if (form.role === 'prestataire') {
-          await supabase.from('prestataires').insert({
-            id: data.user.id,
+      // 3. Si prestataire, créer la ligne dans prestataires avec toutes les valeurs par défaut
+      if (form.role === 'prestataire') {
+        const { error: prestError } = await supabase
+          .from('prestataires')
+          .insert({
+            id: userId,
+            metier: '',
+            competences: [],
+            prix_min: 0,
+            prix_max: 0,
             disponible: true,
             note_moyenne: 0,
             nb_missions: 0,
             verifie_cni: false,
+            cni_url: null,
+            cv_url: null,
+            github_url: null,
+            portfolio_url: null,
+            linkedin_url: null,
           })
-        }
+
+        if (prestError) throw prestError
       }
 
       navigate('/')
     } catch (err) {
-      setError(err.message || 'Une erreur est survenue')
+      setError(err.message || 'Une erreur est survenue lors de l\'inscription')
     } finally {
       setLoading(false)
     }
@@ -123,7 +141,6 @@ const Register = () => {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
 
-        {/* Logo */}
         <div className="text-center mb-8">
           <img src={logo} alt="Alicia" className="h-16 w-auto object-contain mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Créer un compte</h1>
@@ -160,7 +177,7 @@ const Register = () => {
             </div>
           )}
 
-          {/* Étape 1 — Informations */}
+          {/* Étape 1 */}
           {step === 1 && (
             <div className="space-y-5">
               <div>
@@ -169,27 +186,21 @@ const Register = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Nom complet
-                </label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Nom complet</label>
                 <input type="text" name="nom" value={form.nom} onChange={handleChange}
                   placeholder="Amadou Diallo"
                   className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Adresse email
-                </label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Adresse email</label>
                 <input type="email" name="email" value={form.email} onChange={handleChange}
                   placeholder="vous@exemple.com"
                   className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Téléphone
-                </label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Téléphone</label>
                 <div className="flex items-center border border-gray-200 rounded-xl bg-gray-50 focus-within:border-gray-900 focus-within:ring-2 focus-within:ring-gray-900/10 transition-all">
                   <span className="px-3 text-gray-500 text-sm font-medium border-r border-gray-200 py-3.5 flex-shrink-0">
                     🇸🇳 +221
@@ -207,7 +218,7 @@ const Register = () => {
             </div>
           )}
 
-          {/* Étape 2 — Rôle */}
+          {/* Étape 2 */}
           {step === 2 && (
             <div className="space-y-5">
               <div>
@@ -265,7 +276,7 @@ const Register = () => {
             </div>
           )}
 
-          {/* Étape 3 — Mot de passe */}
+          {/* Étape 3 */}
           {step === 3 && (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
@@ -286,18 +297,14 @@ const Register = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Mot de passe
-                </label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Mot de passe</label>
                 <input type="password" name="password" value={form.password} onChange={handleChange}
                   placeholder="Min. 6 caractères"
                   className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Confirmer le mot de passe
-                </label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Confirmer le mot de passe</label>
                 <input type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange}
                   placeholder="Répétez le mot de passe"
                   className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
