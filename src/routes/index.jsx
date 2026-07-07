@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import LandingPage from '../pages/LandingPage'
 
 // Auth
 import Login from '../pages/auth/Login'
@@ -39,18 +40,24 @@ const AppRoutes = () => {
   const { user, profile } = useAuth()
 
   const getHome = () => {
-    if (!user) return <Navigate to="/login" replace />
+    // Si pas connecté → landing page
+    if (!user) return <LandingPage />
+    // Si connecté → redirection selon le rôle
     if (profile?.role === 'client') return <Navigate to="/client/dashboard" replace />
     if (profile?.role === 'prestataire') return <Navigate to="/prestataire/dashboard" replace />
     if (profile?.role === 'admin') return <Navigate to="/admin/dashboard" replace />
-    return <Navigate to="/login" replace />
+    return <LandingPage />
   }
 
   return (
     <BrowserRouter>
       <Routes>
 
+        {/* Landing page si non connecté, dashboard si connecté */}
         <Route path="/" element={getHome()} />
+
+        {/* Page vitrine accessible directement */}
+        <Route path="/accueil" element={<LandingPage />} />
 
         {/* Auth */}
         <Route path="/login" element={<Login />} />
@@ -113,7 +120,7 @@ const AppRoutes = () => {
           <ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>
         } />
 
-        {/* 404 */}
+        {/* 404 — redirige vers accueil */}
         <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>

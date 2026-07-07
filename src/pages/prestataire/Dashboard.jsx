@@ -13,20 +13,35 @@ const PrestataireDashboard = () => {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const [missions, setMissions] = useState([])
+  const [missionsAssignees, setMissionsAssignees] = useState([])
   const [profil, setProfil] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { fetchData() }, [])
 
   const fetchData = async () => {
+    // Toutes les missions du prestataire (hors en_attente non acceptées)
     const { data: missionsData } = await supabase
       .from('missions')
       .select('*, categorie:categories(nom), client:profiles!missions_client_id_fkey(nom, avatar_url)')
       .eq('prestataire_id', profile?.id)
+      .not('statut', 'eq', 'en_attente') // exclut les missions en attente d'acceptation
       .order('created_at', { ascending: false })
+
+    // Missions assignées DIRECTEMENT en attente d'acceptation du prestataire
+    const { data: assigneesData } = await supabase
+      .from('missions')
+      .select('*, categorie:categories(nom), client:profiles!missions_client_id_fkey(nom, avatar_url)')
+      .eq('prestataire_id', profile?.id)
+      .eq('statut', 'en_attente')
+      .eq('assigne_directement', true) // uniquement les vraies assignations directes
+      .order('created_at', { ascending: false })
+
     const { data: profilData } = await supabase
       .from('prestataires').select('*').eq('id', profile?.id).single()
+
     setMissions(missionsData || [])
+    setMissionsAssignees(assigneesData || [])
     setProfil(profilData)
     setLoading(false)
   }
@@ -42,7 +57,9 @@ const PrestataireDashboard = () => {
   }
 
   const handleRefuserMission = async (missionId) => {
-    await supabase.from('missions').update({ statut: 'en_attente', prestataire_id: null }).eq('id', missionId)
+    await supabase.from('missions')
+      .update({ statut: 'en_attente', prestataire_id: null, assigne_directement: false })
+      .eq('id', missionId)
     fetchData()
   }
 
@@ -50,18 +67,15 @@ const PrestataireDashboard = () => {
     total: missions.length,
     en_cours: missions.filter(m => m.statut === 'en_cours').length,
     valide: missions.filter(m => m.statut === 'valide').length,
-    en_attente: missions.filter(m => m.statut === 'en_attente').length,
   }
   const totalGagne = missions.filter(m => m.statut === 'valide').reduce((acc, m) => acc + (m.budget || 0), 0)
-
-  // Missions assignées directement (en attente d'acceptation du prestataire)
-  const missionsAssignees = missions.filter(m => m.statut === 'en_attente' && m.prestataire_id === profile?.id)
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 md:px-6 py-8">
 
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">
             <Avatar url={profile?.avatar_url} nom={profile?.nom} size="lg" />
@@ -81,6 +95,7 @@ const PrestataireDashboard = () => {
           </Link>
         </div>
 
+        {/* Alerte CNI */}
         {profil && !profil.verifie_cni && (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-6">
             <div className="flex items-center gap-3">
@@ -106,7 +121,7 @@ const PrestataireDashboard = () => {
           </div>
         )}
 
-        {/* Missions assignées en attente d'acceptation */}
+        {/* Missions assignées directement en attente */}
         {missionsAssignees.length > 0 && (
           <div className="mb-6">
             <h2 className="font-bold text-gray-900 text-sm mb-3 flex items-center gap-2">
@@ -150,6 +165,7 @@ const PrestataireDashboard = () => {
           </div>
         )}
 
+        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
             { label: 'Total gagné', value: totalGagne.toLocaleString() + ' FCFA', color: 'text-emerald-600' },
@@ -166,6 +182,7 @@ const PrestataireDashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
+          {/* Missions actives */}
           <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <h2 className="font-bold text-gray-900 text-sm">Mes missions</h2>
@@ -179,7 +196,7 @@ const PrestataireDashboard = () => {
               <div className="py-12 flex items-center justify-center">
                 <div className="w-8 h-8 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
               </div>
-            ) : missions.filter(m => m.statut !== 'en_attente').length === 0 ? (
+            ) : missions.length === 0 ? (
               <div className="px-5 py-12 text-center">
                 <p className="text-gray-900 font-semibold text-sm mb-1">Aucune mission en cours</p>
                 <p className="text-gray-400 text-xs mb-4">Parcourez les missions disponibles</p>
@@ -190,7 +207,7 @@ const PrestataireDashboard = () => {
               </div>
             ) : (
               <div className="divide-y divide-gray-50">
-                {missions.filter(m => m.statut !== 'en_attente').slice(0, 6).map((mission) => (
+                {missions.slice(0, 6).map((mission) => (
                   <div key={mission.id}
                     className="px-5 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={() => navigate('/prestataire/historique')}>
@@ -224,12 +241,15 @@ const PrestataireDashboard = () => {
             )}
           </div>
 
+          {/* Sidebar */}
           <div className="space-y-4">
             {profil && (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-gray-900 text-sm">Mon profil</h3>
-                  <Link to="/prestataire/profil" className="text-xs text-gray-400 hover:text-gray-900 transition-colors">Modifier</Link>
+                  <Link to="/prestataire/profil" className="text-xs text-gray-400 hover:text-gray-900 transition-colors">
+                    Modifier
+                  </Link>
                 </div>
                 <div className="flex items-center gap-3 mb-4">
                   <Avatar url={profile?.avatar_url} nom={profile?.nom} size="md" />
