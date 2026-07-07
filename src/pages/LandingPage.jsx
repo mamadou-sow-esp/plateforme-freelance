@@ -1,12 +1,15 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Search, Star, Shield, MessageCircle, MapPin, CheckCircle,
   Briefcase, Users, TrendingUp, ArrowRight, Smartphone, Clock,
-  Award, Zap
+  Award, Zap, Menu, X
 } from 'lucide-react'
 import logo from '../assets/logo.png'
 
 const LandingPage = () => {
+  const [menuOpen, setMenuOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-white font-sans">
 
@@ -14,6 +17,8 @@ const LandingPage = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <img src={logo} alt="Alicia" className="h-10 w-auto object-contain" />
+
+          {/* Liens desktop */}
           <div className="hidden md:flex items-center gap-8">
             <a href="#fonctionnement" className="text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium">
               Comment ça marche
@@ -25,7 +30,9 @@ const LandingPage = () => {
               FAQ
             </a>
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* Boutons desktop */}
+          <div className="hidden md:flex items-center gap-3">
             <Link to="/login"
               className="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors">
               Connexion
@@ -35,7 +42,45 @@ const LandingPage = () => {
               S'inscrire
             </Link>
           </div>
+
+          {/* Hamburger mobile */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="md:hidden p-2 rounded-xl hover:bg-gray-100 transition-all">
+            {menuOpen ? <X className="w-5 h-5 text-gray-700" /> : <Menu className="w-5 h-5 text-gray-700" />}
+          </button>
         </div>
+
+        {/* Menu mobile déroulant */}
+        {menuOpen && (
+          <div className="md:hidden bg-white border-t border-gray-100 px-4 py-4 space-y-1">
+            <a href="#fonctionnement"
+              onClick={() => setMenuOpen(false)}
+              className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-all">
+              Comment ça marche
+            </a>
+            <a href="#fonctionnalites"
+              onClick={() => setMenuOpen(false)}
+              className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-all">
+              Fonctionnalités
+            </a>
+            <a href="#faq"
+              onClick={() => setMenuOpen(false)}
+              className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-all">
+              FAQ
+            </a>
+            <div className="pt-3 border-t border-gray-100 flex flex-col gap-2">
+              <Link to="/login" onClick={() => setMenuOpen(false)}
+                className="w-full px-4 py-3 text-center text-sm font-semibold text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all">
+                Connexion
+              </Link>
+              <Link to="/register" onClick={() => setMenuOpen(false)}
+                className="w-full px-4 py-3 text-center text-sm font-semibold text-white bg-gray-900 rounded-xl hover:bg-black transition-all">
+                S'inscrire
+              </Link>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* HERO */}
@@ -68,7 +113,6 @@ const LandingPage = () => {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-6 mt-20 max-w-2xl mx-auto">
           {[
             { value: '100%', label: 'Gratuit à l\'inscription' },
@@ -88,17 +132,13 @@ const LandingPage = () => {
         <div className="max-w-6xl mx-auto px-4 md:px-6">
           <div className="text-center mb-14">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Processus</p>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
-              Comment ça marche ?
-            </h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">Comment ça marche ?</h2>
             <p className="text-gray-400 mt-3 text-sm max-w-md mx-auto">
               De la création de compte à la mission validée, tout se fait en quelques étapes simples.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-            {/* Côté client */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8">
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center">
@@ -129,12 +169,10 @@ const LandingPage = () => {
               </div>
               <Link to="/register"
                 className="mt-8 flex items-center justify-center gap-2 w-full py-3 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-all">
-                Je suis client
-                <ArrowRight className="w-4 h-4" />
+                Je suis client <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
 
-            {/* Côté prestataire */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8">
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center">
@@ -165,8 +203,7 @@ const LandingPage = () => {
               </div>
               <Link to="/register"
                 className="mt-8 flex items-center justify-center gap-2 w-full py-3 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:border-gray-900 transition-all">
-                Je suis prestataire
-                <ArrowRight className="w-4 h-4" />
+                Je suis prestataire <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
@@ -177,9 +214,7 @@ const LandingPage = () => {
       <section id="fonctionnalites" className="py-20 px-4 md:px-6 max-w-6xl mx-auto">
         <div className="text-center mb-14">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Fonctionnalités</p>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
-            Tout ce dont vous avez besoin
-          </h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">Tout ce dont vous avez besoin</h2>
           <p className="text-gray-400 mt-3 text-sm max-w-md mx-auto">
             Une plateforme complète pensée pour le marché sénégalais.
           </p>
@@ -187,60 +222,15 @@ const LandingPage = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {[
-            {
-              icon: MapPin,
-              title: 'Recherche par proximité',
-              desc: 'Trouvez des prestataires autour de vous grâce à la géolocalisation GPS en temps réel.',
-              color: 'bg-emerald-50 text-emerald-600',
-            },
-            {
-              icon: Shield,
-              title: 'Vérification d\'identité',
-              desc: 'Les prestataires vérifiés CNI obtiennent un badge bleu de confiance visible sur leur profil.',
-              color: 'bg-blue-50 text-blue-600',
-            },
-            {
-              icon: MessageCircle,
-              title: 'Messagerie temps réel',
-              desc: 'Communiquez directement avec votre client ou prestataire sans quitter la plateforme.',
-              color: 'bg-violet-50 text-violet-600',
-            },
-            {
-              icon: Briefcase,
-              title: 'Gestion de missions',
-              desc: 'Cycle de vie complet : création, acceptation, livraison, validation ou contestation.',
-              color: 'bg-amber-50 text-amber-600',
-            },
-            {
-              icon: Star,
-              title: 'Système d\'avis',
-              desc: 'Notes et commentaires post-mission pour évaluer la qualité des prestataires.',
-              color: 'bg-orange-50 text-orange-600',
-            },
-            {
-              icon: Smartphone,
-              title: 'Application mobile PWA',
-              desc: 'Installez Alicia sur votre mobile directement depuis votre navigateur, sans passer par un store.',
-              color: 'bg-gray-100 text-gray-600',
-            },
-            {
-              icon: TrendingUp,
-              title: 'Statistiques détaillées',
-              desc: 'Gains, missions par mois, note moyenne et répartition par catégorie pour les prestataires.',
-              color: 'bg-emerald-50 text-emerald-600',
-            },
-            {
-              icon: Clock,
-              title: 'Suivi en temps réel',
-              desc: 'Tableau de bord de suivi avec timeline pour chaque mission en cours.',
-              color: 'bg-blue-50 text-blue-600',
-            },
-            {
-              icon: Search,
-              title: 'Filtres avancés',
-              desc: 'Filtrez par catégorie, localisation, budget, disponibilité, proximité ou certification CNI.',
-              color: 'bg-violet-50 text-violet-600',
-            },
+            { icon: MapPin, title: 'Recherche par proximité', desc: 'Trouvez des prestataires autour de vous grâce à la géolocalisation GPS en temps réel.', color: 'bg-emerald-50 text-emerald-600' },
+            { icon: Shield, title: 'Vérification d\'identité', desc: 'Les prestataires vérifiés CNI obtiennent un badge bleu de confiance visible sur leur profil.', color: 'bg-blue-50 text-blue-600' },
+            { icon: MessageCircle, title: 'Messagerie temps réel', desc: 'Communiquez directement avec votre client ou prestataire sans quitter la plateforme.', color: 'bg-violet-50 text-violet-600' },
+            { icon: Briefcase, title: 'Gestion de missions', desc: 'Cycle de vie complet : création, acceptation, livraison, validation ou contestation.', color: 'bg-amber-50 text-amber-600' },
+            { icon: Star, title: 'Système d\'avis', desc: 'Notes et commentaires post-mission pour évaluer la qualité des prestataires.', color: 'bg-orange-50 text-orange-600' },
+            { icon: Smartphone, title: 'Application mobile PWA', desc: 'Installez Alicia sur votre mobile directement depuis votre navigateur, sans passer par un store.', color: 'bg-gray-100 text-gray-600' },
+            { icon: TrendingUp, title: 'Statistiques détaillées', desc: 'Gains, missions par mois, note moyenne et répartition par catégorie pour les prestataires.', color: 'bg-emerald-50 text-emerald-600' },
+            { icon: Clock, title: 'Suivi en temps réel', desc: 'Tableau de bord de suivi avec timeline pour chaque mission en cours.', color: 'bg-blue-50 text-blue-600' },
+            { icon: Search, title: 'Filtres avancés', desc: 'Filtrez par catégorie, localisation, budget, disponibilité, proximité ou certification CNI.', color: 'bg-violet-50 text-violet-600' },
           ].map((feature, i) => (
             <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 hover:border-gray-200 hover:shadow-sm transition-all">
               <div className={`w-10 h-10 ${feature.color} rounded-xl flex items-center justify-center mb-4`}>
@@ -253,20 +243,19 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* CTA BANNER */}
+      {/* CTA */}
       <section className="py-20 px-4 md:px-6">
         <div className="max-w-4xl mx-auto bg-gray-900 rounded-3xl p-10 md:p-16 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight mb-4">
             Prêt à rejoindre Alicia ?
           </h2>
           <p className="text-gray-400 text-sm mb-8 max-w-md mx-auto leading-relaxed">
-            Que vous soyez client à la recherche d'un talent ou prestataire souhaitant développer votre activité, créez votre compte en moins de 2 minutes.
+            Que vous soyez client ou prestataire, créez votre compte en moins de 2 minutes.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/register"
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-gray-900 font-semibold rounded-xl hover:bg-gray-100 transition-all text-sm">
-              Créer mon compte
-              <ArrowRight className="w-4 h-4" />
+              Créer mon compte <ArrowRight className="w-4 h-4" />
             </Link>
             <Link to="/login"
               className="inline-flex items-center justify-center gap-2 px-6 py-3.5 border border-gray-700 text-gray-300 font-semibold rounded-xl hover:border-gray-500 transition-all text-sm">
@@ -280,42 +269,21 @@ const LandingPage = () => {
       <section id="faq" className="py-20 px-4 md:px-6 max-w-3xl mx-auto">
         <div className="text-center mb-14">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">FAQ</p>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
-            Questions fréquentes
-          </h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">Questions fréquentes</h2>
         </div>
-
         <div className="space-y-4">
           {[
-            {
-              q: 'Est-ce que Alicia est gratuit ?',
-              a: 'Oui, l\'inscription et l\'utilisation de la plateforme sont entièrement gratuites pour les clients comme pour les prestataires.',
-            },
-            {
-              q: 'Comment fonctionne la vérification CNI ?',
-              a: 'Le prestataire uploade une photo ou scan de sa CNI depuis son profil. L\'équipe Alicia examine le document et attribue un badge vérifié visible sur son profil si tout est conforme.',
-            },
-            {
-              q: 'Puis-je utiliser Alicia sur mon téléphone ?',
-              a: 'Oui, Alicia est une Progressive Web App (PWA). Vous pouvez l\'installer directement depuis votre navigateur mobile sans passer par le Play Store ou l\'App Store.',
-            },
-            {
-              q: 'Comment fonctionne le système de mission ?',
-              a: 'Un client peut publier une mission publique (ouverte à tous les prestataires) ou l\'assigner directement à un prestataire choisi. Le prestataire doit accepter avant que la mission commence.',
-            },
-            {
-              q: 'La messagerie est-elle sécurisée ?',
-              a: 'Oui, la messagerie est intégrée à la plateforme et fonctionne en temps réel. Les conversations sont privées entre le client et le prestataire concernés.',
-            },
-            {
-              q: 'Comment sont calculées les notes des prestataires ?',
-              a: 'Après chaque mission validée, le client peut laisser une note de 1 à 5 étoiles et un commentaire. La note moyenne est automatiquement recalculée et affichée sur le profil du prestataire.',
-            },
+            { q: 'Est-ce que Alicia est gratuit ?', a: 'Oui, l\'inscription et l\'utilisation de la plateforme sont entièrement gratuites pour les clients comme pour les prestataires.' },
+            { q: 'Comment fonctionne la vérification CNI ?', a: 'Le prestataire uploade une photo ou scan de sa CNI depuis son profil. L\'équipe Alicia examine le document et attribue un badge vérifié visible sur son profil si tout est conforme.' },
+            { q: 'Puis-je utiliser Alicia sur mon téléphone ?', a: 'Oui, Alicia est une Progressive Web App (PWA). Vous pouvez l\'installer directement depuis votre navigateur mobile sans passer par le Play Store ou l\'App Store.' },
+            { q: 'Comment fonctionne le système de mission ?', a: 'Un client peut publier une mission publique ou l\'assigner directement à un prestataire. Le prestataire peut accepter, refuser ou négocier le prix avant que la mission commence.' },
+            { q: 'La messagerie est-elle sécurisée ?', a: 'Oui, la messagerie est intégrée à la plateforme et fonctionne en temps réel. Les conversations sont privées entre le client et le prestataire concernés.' },
+            { q: 'Comment sont calculées les notes des prestataires ?', a: 'Après chaque mission validée, le client peut laisser une note de 1 à 5 étoiles et un commentaire. La note moyenne est automatiquement recalculée et affichée sur le profil du prestataire.' },
           ].map((faq, i) => (
             <details key={i} className="group bg-white rounded-2xl border border-gray-100 overflow-hidden">
               <summary className="flex items-center justify-between px-6 py-4 cursor-pointer list-none">
-                <span className="text-sm font-semibold text-gray-900">{faq.q}</span>
-                <span className="text-gray-400 group-open:rotate-45 transition-transform text-xl leading-none flex-shrink-0 ml-4">+</span>
+                <span className="text-sm font-semibold text-gray-900 pr-4">{faq.q}</span>
+                <span className="text-gray-400 group-open:rotate-45 transition-transform text-xl leading-none flex-shrink-0">+</span>
               </summary>
               <div className="px-6 pb-5">
                 <p className="text-sm text-gray-500 leading-relaxed">{faq.a}</p>
@@ -329,7 +297,7 @@ const LandingPage = () => {
       <footer className="border-t border-gray-100 py-8 px-4 md:px-6">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <img src={logo} alt="Alicia" className="h-8 w-auto object-contain" />
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-6 flex-wrap justify-center">
             <a href="#fonctionnement" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Comment ça marche</a>
             <a href="#fonctionnalites" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Fonctionnalités</a>
             <a href="#faq" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">FAQ</a>
