@@ -9,6 +9,7 @@ import Avatar from '../../components/ui/Avatar'
 import StatusBadge from '../../components/ui/StatusBadge'
 import StarRating from '../../components/ui/StarRating'
 import VerifiedBadge from '../../components/ui/VerifiedBadge'
+import { MapPin } from 'lucide-react'
 
 const getDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371
@@ -31,12 +32,11 @@ const ClientDashboard = () => {
   const [loadingPrestataires, setLoadingPrestataires] = useState(true)
   const [geoActive, setGeoActive] = useState(false)
 
-  const geo = useGeolocation(profile?.id, false) // false = ne sauvegarde pas en base (client)
+  const geo = useGeolocation(profile?.id, false)
 
   useEffect(() => {
     fetchMissions()
     fetchPrestataires()
-    // Démarre la géoloc automatiquement au chargement
     geo.startWatching()
     setGeoActive(true)
   }, [])
@@ -122,7 +122,7 @@ const ClientDashboard = () => {
           </Link>
         </div>
 
-        {/* 1. PRESTATAIRES RECOMMANDÉS */}
+        {/* PRESTATAIRES RECOMMANDÉS */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden mb-6">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <div className="flex items-center gap-2">
@@ -132,11 +132,9 @@ const ClientDashboard = () => {
               {geo.loading && (
                 <div className="w-3.5 h-3.5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
               )}
+              {/* Point vert uniquement — pas de badge texte */}
               {geo.location && (
-                <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full font-medium">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                  En direct
-                </span>
+                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
               )}
             </div>
             <Link to="/client/rechercher"
@@ -172,13 +170,11 @@ const ClientDashboard = () => {
             <div className="mx-5 mt-3">
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-1 rounded-full transition-all ${
-                      geo.location.accuracy < 50 ? 'bg-emerald-500 w-full'
-                      : geo.location.accuracy < 200 ? 'bg-amber-400 w-2/3'
-                      : 'bg-red-400 w-1/3'
-                    }`}
-                  />
+                  <div className={`h-1 rounded-full transition-all ${
+                    geo.location.accuracy < 50 ? 'bg-emerald-500 w-full'
+                    : geo.location.accuracy < 200 ? 'bg-amber-400 w-2/3'
+                    : 'bg-red-400 w-1/3'
+                  }`} />
                 </div>
                 <span className="text-xs text-gray-400 whitespace-nowrap">
                   Précision : {Math.round(geo.location.accuracy)} m
@@ -216,8 +212,9 @@ const ClientDashboard = () => {
                         </div>
                       )}
                       {p.distance !== null ? (
-                        <span className="text-xs text-emerald-600 font-semibold">
-                          📍 {formatDistance(p.distance)}
+                        <span className="flex items-center gap-1 text-xs text-emerald-600 font-semibold">
+                          <MapPin className="w-3 h-3" />
+                          {formatDistance(p.distance)}
                         </span>
                       ) : (
                         p.profile?.localisation && (
@@ -249,7 +246,7 @@ const ClientDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-5">
 
-            {/* 2. NOUVELLES MISSIONS */}
+            {/* NOUVELLES MISSIONS */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <h2 className="font-bold text-gray-900 text-sm">Nouvelles missions</h2>
@@ -298,7 +295,7 @@ const ClientDashboard = () => {
               )}
             </div>
 
-            {/* 3. STATS */}
+            {/* STATS */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5">
               <h2 className="font-bold text-gray-900 text-sm mb-4">Mes statistiques</h2>
               <div className="grid grid-cols-2 gap-3">
@@ -316,7 +313,7 @@ const ClientDashboard = () => {
               </div>
             </div>
 
-            {/* 4. HISTORIQUE */}
+            {/* HISTORIQUE */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <h2 className="font-bold text-gray-900 text-sm">Historique récent</h2>
@@ -370,13 +367,11 @@ const ClientDashboard = () => {
               </Link>
             </div>
 
-            {/* Statut géoloc temps réel */}
+            {/* Statut géoloc */}
             <div className={`rounded-2xl p-4 border ${
-              geo.location
-                ? 'bg-emerald-50 border-emerald-200'
-                : geo.error
-                ? 'bg-red-50 border-red-200'
-                : 'bg-gray-50 border-gray-200'
+              geo.location ? 'bg-emerald-50 border-emerald-200'
+              : geo.error ? 'bg-red-50 border-red-200'
+              : 'bg-gray-50 border-gray-200'
             }`}>
               <div className="flex items-center gap-2 mb-2">
                 <div className={`w-2 h-2 rounded-full ${
