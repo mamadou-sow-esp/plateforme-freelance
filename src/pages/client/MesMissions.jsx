@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { insertModere } from '../../lib/moderation'
 import { useAuth } from '../../context/AuthContext'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
@@ -44,7 +45,7 @@ const MesMissions = () => {
     const { count } = await supabase.from('missions')
       .select('*', { count: 'exact', head: true })
       .eq('prestataire_id', prestataireId).eq('statut', 'valide')
-    const { data: tousAvis } = await supabase.from('avis').select('note').eq('prestataire_id', prestataireId)
+    const { data: tousAvis } = await supabase.from('avis').select('note').eq('prestataire_id', prestataireId).eq('masque', false)
     const moyenne = tousAvis && tousAvis.length > 0
       ? tousAvis.reduce((acc, a) => acc + a.note, 0) / tousAvis.length : 0
     await supabase.from('prestataires').update({
@@ -110,17 +111,22 @@ const MesMissions = () => {
   const handleLaisserAvis = async () => {
     if (!avisModal) return
     setSavingAvis(true)
-    await supabase.from('avis').insert({
-      mission_id: avisModal.id, auteur_id: profile?.id,
-      prestataire_id: avisModal.prestataire_id,
-      note: avisForm.note, commentaire: avisForm.commentaire,
-    })
-    await recalculerStats(avisModal.prestataire_id)
-    setAvisModal(null)
-    setAvisForm({ note: 5, commentaire: '' })
-    setSavingAvis(false)
-    fetchMissions()
-    fetchAvisDejaLaisses()
+    try {
+      await insertModere('avis', {
+        mission_id: avisModal.id, auteur_id: profile?.id,
+        prestataire_id: avisModal.prestataire_id,
+        note: avisForm.note, commentaire: avisForm.commentaire,
+      })
+      await recalculerStats(avisModal.prestataire_id)
+      setAvisModal(null)
+      setAvisForm({ note: 5, commentaire: '' })
+      fetchMissions()
+      fetchAvisDejaLaisses()
+    } catch (err) {
+      showNotif(err.message, 'error')
+    } finally {
+      setSavingAvis(false)
+    }
   }
 
   const filtres = [

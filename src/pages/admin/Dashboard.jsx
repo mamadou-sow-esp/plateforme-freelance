@@ -5,6 +5,7 @@ import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import Avatar from '../../components/ui/Avatar'
 import StatusBadge from '../../components/ui/StatusBadge'
+import StarRating from '../../components/ui/StarRating'
 
 const AdminDashboard = () => {
   const { profile } = useAuth()
@@ -12,6 +13,7 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState([])
   const [missions, setMissions] = useState([])
   const [partenaires, setPartenaires] = useState([])
+  const [avisList, setAvisList] = useState([])
   const [prestatairesNonVerifies, setPrestatairesNonVerifies] = useState([])
   const [onglet, setOnglet] = useState('overview')
   const [loading, setLoading] = useState(true)
@@ -43,12 +45,18 @@ const AdminDashboard = () => {
       .not('cni_url', 'is', null)
       .order('created_at', { ascending: false })
 
+    const { data: avisData } = await supabase
+      .from('avis')
+      .select('*, auteur:profiles!avis_auteur_id_fkey(nom, avatar_url), prestataire:profiles!avis_prestataire_id_fkey(nom), mission:missions(titre)')
+      .order('created_at', { ascending: false })
+
     const u = usersData || []
     const m = missionsData || []
 
     setUsers(u)
     setMissions(m)
     setPartenaires(partenairesData || [])
+    setAvisList(avisData || [])
     setPrestatairesNonVerifies(cniData || [])
     setStats({
       users: u.length,
@@ -75,6 +83,41 @@ const AdminDashboard = () => {
   const handleSupprimerMission = async (id) => {
     if (!confirm('Supprimer cette mission ?')) return
     await supabase.from('missions').delete().eq('id', id)
+    fetchData()
+  }
+
+  const recalculerNoteAvis = async (prestataireId) => {
+    if (!prestataireId) return
+    const { data: tousAvis } = await supabase
+      .from('avis').select('note').eq('prestataire_id', prestataireId).eq('masque', false)
+    const moyenne = tousAvis && tousAvis.length > 0
+      ? tousAvis.reduce((acc, a) => acc + a.note, 0) / tousAvis.length : 0
+    await supabase.from('prestataires').update({
+      note_moyenne: Math.round(moyenne * 10) / 10,
+    }).eq('id', prestataireId)
+  }
+
+  const handleToggleMasquerAvis = async (avisItem) => {
+    const nouveauMasque = !avisItem.masque
+    const { error } = await supabase.from('avis').update({
+      masque: nouveauMasque,
+      masque_le: nouveauMasque ? new Date().toISOString() : null,
+      masque_par: nouveauMasque ? profile?.id : null,
+    }).eq('id', avisItem.id)
+
+    if (error) {
+      alert('Erreur : ' + error.message)
+      return
+    }
+
+    await recalculerNoteAvis(avisItem.prestataire_id)
+    fetchData()
+  }
+
+  const handleSupprimerAvis = async (avisItem) => {
+    if (!confirm('Supprimer definitivement cet avis ? Cette action est irreversible.')) return
+    await supabase.from('avis').delete().eq('id', avisItem.id)
+    await recalculerNoteAvis(avisItem.prestataire_id)
     fetchData()
   }
 
@@ -161,6 +204,7 @@ const handleRefuserCNI = async (prestataireId) => {
     { key: 'cni', label: 'Verification CNI', badge: cniEnAttente.length },
     { key: 'users', label: 'Utilisateurs' },
     { key: 'missions', label: 'Missions' },
+    { key: 'avis', label: 'Avis' },
     { key: 'partenaires', label: 'Partenaires' },
   ]
 
@@ -496,6 +540,70 @@ const handleRefuserCNI = async (prestataireId) => {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Avis */}
+            {onglet === 'avis' && (
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-card overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100">
+                  <h2 className="font-bold text-gray-900 text-sm">Tous les avis ({avisList.length})</h2>
+                </div>
+                {avisList.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <p className="text-gray-400 text-sm">Aucun avis pour l instant</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    {avisList.map(a => (
+                      <div key={a.id} className={`px-6 py-4 ${a.masque ? 'bg-gray-50/60' : ''}`}>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <Avatar url={a.auteur?.avatar_url} nom={a.auteur?.nom} size="sm" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-semibold text-gray-900">{a.auteur?.nom || 'Auteur inconnu'}</p>
+                                <span className="text-xs text-gray-400">→</span>
+                                <p className="text-sm text-gray-600">{a.prestataire?.nom || 'Prestataire inconnu'}</p>
+                                {a.masque && (
+                                  <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full font-semibold">
+                                    Masque
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <StarRating note={a.note} size="sm" />
+                                <span className="text-xs text-gray-400">
+                                  {new Date(a.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </span>
+                                {a.mission?.titre && (
+                                  <span className="text-xs text-gray-400 truncate">· {a.mission.titre}</span>
+                                )}
+                              </div>
+                              {a.commentaire ? (
+                                <p className="text-sm text-gray-600 leading-relaxed mt-2">{a.commentaire}</p>
+                              ) : (
+                                <p className="text-xs text-gray-400 italic mt-2">Aucun commentaire</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                            <button onClick={() => handleToggleMasquerAvis(a)}
+                              className={`text-xs px-3 py-1.5 rounded-xl font-semibold transition-all whitespace-nowrap ${
+                                a.masque ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-100 text-gray-600 border border-gray-200 hover:border-gray-400'
+                              }`}>
+                              {a.masque ? 'Afficher' : 'Masquer'}
+                            </button>
+                            <button onClick={() => handleSupprimerAvis(a)}
+                              className="text-xs text-red-400 hover:text-red-600 font-semibold transition-colors whitespace-nowrap">
+                              Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

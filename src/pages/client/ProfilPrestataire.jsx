@@ -29,11 +29,12 @@ const ProfilPrestataire = () => {
     const { data: prestData } = await supabase
       .from('prestataires').select('*').eq('id', id).single()
 
-    // Avis reçus
+    // Avis reçus (les avis masqués par l'administration ne sont pas affichés publiquement)
     const { data: avisData } = await supabase
       .from('avis')
       .select('*, auteur:profiles!avis_auteur_id_fkey(nom, avatar_url)')
       .eq('prestataire_id', id)
+      .eq('masque', false)
       .order('created_at', { ascending: false })
 
     // Stats réelles calculées depuis les missions (pas depuis la table prestataires)

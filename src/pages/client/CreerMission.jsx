@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { insertModere } from '../../lib/moderation'
 import { useAuth } from '../../context/AuthContext'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
@@ -38,7 +39,7 @@ const CreerMission = () => {
       return
     }
     try {
-      const { error: missionError } = await supabase.from('missions').insert({
+      await insertModere('mission', {
         titre: form.titre,
         description: form.description,
         categorie_id: form.categorie_id,
@@ -50,7 +51,6 @@ const CreerMission = () => {
         statut: 'en_attente',
         assigne_directement: !!prestataire_id,
       })
-      if (missionError) throw missionError
       setSuccess(true)
       setTimeout(() => navigate('/client/missions'), 2000)
     } catch (err) {
