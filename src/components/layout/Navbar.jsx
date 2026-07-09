@@ -5,7 +5,7 @@ import Avatar from '../ui/Avatar'
 import logo from '../../assets/logo.png'
 
 const Navbar = () => {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, switchAccount } = useAuth()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -89,8 +89,13 @@ const Navbar = () => {
             </div>
             <Avatar url={profile?.avatar_url} nom={profile?.nom} size="sm" />
             <button
-              onClick={signOut}
+              onClick={switchAccount}
               className="ml-1 px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all">
+              Changer de compte
+            </button>
+            <button
+              onClick={signOut}
+              className="px-3 py-1.5 text-xs font-medium text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all">
               Quitter
             </button>
           </div>
@@ -143,6 +148,11 @@ const Navbar = () => {
                 <p className="text-xs text-gray-400 capitalize">{profile?.role}</p>
               </div>
             </div>
+            <button
+              onClick={() => { switchAccount() }}
+              className="w-full flex items-center px-4 py-3 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-all">
+              Changer de compte
+            </button>
             <button
               onClick={() => { signOut(); setMenuOpen(false) }}
               className="w-full flex items-center px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 rounded-xl transition-all">
