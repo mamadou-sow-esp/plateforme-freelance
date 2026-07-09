@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { getSignedDocUrl } from '../../lib/documents'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import Avatar from '../../components/ui/Avatar'
@@ -17,6 +18,7 @@ const ProfilPrestataire = () => {
   const [avis, setAvis] = useState([])
   const [statsReelles, setStatsReelles] = useState({ nb_missions: 0, note_moyenne: 0 })
   const [loading, setLoading] = useState(true)
+  const [cvSignedUrl, setCvSignedUrl] = useState(null)
 
   useEffect(() => { fetchData() }, [id])
 
@@ -56,6 +58,8 @@ const ProfilPrestataire = () => {
       nb_missions: nbMissions || 0,
       note_moyenne: Math.round(noteMoyenne * 10) / 10,
     })
+    // Le bucket "documents" est privé : URL signée temporaire pour le CV.
+    setCvSignedUrl(prestData?.cv_url ? await getSignedDocUrl(prestData.cv_url) : null)
 
     // Synchronise aussi la table prestataires avec les vraies valeurs
     if (prestData) {
@@ -227,7 +231,7 @@ const ProfilPrestataire = () => {
                     GitHub
                   </a>
                 )}
-                {profilData.portfolio_url && (
+                {profilData.portfolio_url && /^https?:\/\//i.test(profilData.portfolio_url) && (
                   <a href={profilData.portfolio_url} target="_blank" rel="noreferrer"
                     className="px-3 py-2 border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold hover:border-gray-900 transition-all">
                     Portfolio
@@ -239,8 +243,8 @@ const ProfilPrestataire = () => {
                     LinkedIn
                   </a>
                 )}
-                {profilData.cv_url && (
-                  <a href={profilData.cv_url} target="_blank" rel="noreferrer"
+                {profilData.cv_url && cvSignedUrl && (
+                  <a href={cvSignedUrl} target="_blank" rel="noreferrer"
                     className="px-3 py-2 border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold hover:border-gray-900 transition-all">
                     Voir CV
                   </a>

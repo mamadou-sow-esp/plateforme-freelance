@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# Variables d'environnement (ne jamais committer, même si seule la clé
+# publique/anon est présente aujourd'hui — une clé service_role ou un
+# secret ajouté plus tard ne doit pas finir dans l'historique git)
+.env
+.env.local
+.env.*.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { getSignedDocUrl } from '../../lib/documents'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import Avatar from '../../components/ui/Avatar'
@@ -22,8 +23,21 @@ const AdminDashboard = () => {
   const [savingPartenaire, setSavingPartenaire] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [cniModal, setCniModal] = useState(null)
+  const [cniModalSignedUrl, setCniModalSignedUrl] = useState(null)
 
   useEffect(() => { fetchData() }, [])
+
+  // Le bucket "documents" est privé : on génère une URL signée temporaire
+  // à chaque ouverture du modal de vérification CNI.
+  useEffect(() => {
+    let cancelled = false
+    if (cniModal?.cni_url) {
+      getSignedDocUrl(cniModal.cni_url).then((url) => { if (!cancelled) setCniModalSignedUrl(url) })
+    } else {
+      setCniModalSignedUrl(null)
+    }
+    return () => { cancelled = true }
+  }, [cniModal])
 
   const fetchData = async () => {
     setLoading(true)
@@ -245,14 +259,18 @@ const handleRefuserCNI = async (prestataireId) => {
 
             <div className="mb-5">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Document CNI</p>
-              {cniModal.cni_url ? (
+              {cniModal.cni_url ? !cniModalSignedUrl ? (
+                <div className="p-6 text-center bg-gray-50 rounded-xl">
+                  <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin mx-auto" />
+                </div>
+              ) : (
                 <div className="border border-gray-200 rounded-xl overflow-hidden">
                   {cniModal.cni_url.match(/\.(jpg|jpeg|png|webp)$/i) ? (
-                    <img src={cniModal.cni_url} alt="CNI" className="w-full max-h-96 object-contain bg-gray-50" />
+                    <img src={cniModalSignedUrl} alt="CNI" className="w-full max-h-96 object-contain bg-gray-50" />
                   ) : (
                     <div className="p-6 text-center bg-gray-50">
                       <p className="text-sm text-gray-500 mb-3">Document PDF</p>
-                      <a href={cniModal.cni_url} target="_blank" rel="noreferrer"
+                      <a href={cniModalSignedUrl} target="_blank" rel="noreferrer"
                         className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all">
                         Ouvrir le document
                       </a>

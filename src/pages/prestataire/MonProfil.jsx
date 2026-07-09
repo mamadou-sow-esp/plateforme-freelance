@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { getSignedDocUrl } from '../../lib/documents'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import VerifiedBadge from '../../components/ui/VerifiedBadge'
+
+const DOC_MAX_SIZE = 10 * 1024 * 1024 // 10 Mo, doit rester cohérent avec la limite du bucket
+const DOC_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+const AVATAR_MAX_SIZE = 5 * 1024 * 1024 // 5 Mo
+const AVATAR_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 const Toast = ({ message, type = 'success', onClose }) => {
   if (!message) return null
@@ -35,6 +41,8 @@ const MonProfilPrestataire = () => {
   const [detectingLocation, setDetectingLocation] = useState(false)
   const [locationSaved, setLocationSaved] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState(null)
+  const [cniSignedUrl, setCniSignedUrl] = useState(null)
+  const [cvSignedUrl, setCvSignedUrl] = useState(null)
   const [toast, setToast] = useState({ message: '', type: 'success' })
 
   const [form, setForm] = useState({
@@ -74,6 +82,10 @@ const MonProfilPrestataire = () => {
         portfolio_url: prestData.portfolio_url || '',
         linkedin_url: prestData.linkedin_url || '',
       })
+      // Le bucket "documents" est privé : on génère des URLs signées
+      // temporaires pour afficher/ouvrir ses propres CNI et CV.
+      setCniSignedUrl(prestData.cni_url ? await getSignedDocUrl(prestData.cni_url) : null)
+      setCvSignedUrl(prestData.cv_url ? await getSignedDocUrl(prestData.cv_url) : null)
     }
     setLoading(false)
   }
@@ -157,6 +169,14 @@ const MonProfilPrestataire = () => {
   const handleUploadAvatar = async (e) => {
     const file = e.target.files[0]
     if (!file) return
+    if (!AVATAR_ALLOWED_TYPES.includes(file.type)) {
+      showToast('Format non supporté. Utilisez une image JPG, PNG ou WebP.', 'error')
+      return
+    }
+    if (file.size > AVATAR_MAX_SIZE) {
+      showToast('Image trop lourde (5 Mo maximum).', 'error')
+      return
+    }
     setUploadingAvatar(true)
     try {
       const ext = file.name.split('.').pop()
@@ -178,6 +198,14 @@ const MonProfilPrestataire = () => {
   const handleUploadCNI = async (e) => {
     const file = e.target.files[0]
     if (!file) return
+    if (!DOC_ALLOWED_TYPES.includes(file.type)) {
+      showToast('Format non supporté. Utilisez une image (JPG/PNG/WebP) ou un PDF.', 'error')
+      return
+    }
+    if (file.size > DOC_MAX_SIZE) {
+      showToast('Fichier trop lourd (10 Mo maximum).', 'error')
+      return
+    }
     setUploading(true)
     try {
       const ext = file.name.split('.').pop()
@@ -185,9 +213,10 @@ const MonProfilPrestataire = () => {
       const { error: uploadError } = await supabase.storage
         .from('documents').upload(fileName, file, { upsert: true })
       if (uploadError) throw uploadError
-      const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName)
+      // Le bucket "documents" est privé : on stocke le chemin (pas d'URL
+      // publique), une URL signée est générée à chaque affichage.
       await supabase.from('prestataires')
-        .update({ cni_url: urlData.publicUrl, verifie_cni: false }).eq('id', profile?.id)
+        .update({ cni_url: fileName, verifie_cni: false }).eq('id', profile?.id)
       await fetchData()
       showToast('CNI uploadée — en attente de vérification', 'success')
     } catch (err) {
@@ -200,6 +229,14 @@ const MonProfilPrestataire = () => {
   const handleUploadCV = async (e) => {
     const file = e.target.files[0]
     if (!file) return
+    if (!DOC_ALLOWED_TYPES.includes(file.type)) {
+      showToast('Format non supporté. Utilisez une image (JPG/PNG/WebP) ou un PDF.', 'error')
+      return
+    }
+    if (file.size > DOC_MAX_SIZE) {
+      showToast('Fichier trop lourd (10 Mo maximum).', 'error')
+      return
+    }
     setUploadingCV(true)
     try {
       const ext = file.name.split('.').pop()
@@ -207,8 +244,7 @@ const MonProfilPrestataire = () => {
       const { error: uploadError } = await supabase.storage
         .from('documents').upload(fileName, file, { upsert: true })
       if (uploadError) throw uploadError
-      const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName)
-      await supabase.from('prestataires').update({ cv_url: urlData.publicUrl }).eq('id', profile?.id)
+      await supabase.from('prestataires').update({ cv_url: fileName }).eq('id', profile?.id)
       await fetchData()
       showToast('CV uploadé avec succès ✓', 'success')
     } catch (err) {
@@ -454,8 +490,10 @@ const MonProfilPrestataire = () => {
                   {profil?.cni_url && (
                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200 mb-2">
                       <p className="text-xs text-gray-600 flex-1">CNI uploadée</p>
-                      <a href={profil.cni_url} target="_blank" rel="noreferrer"
-                        className="text-xs text-gray-900 font-semibold hover:underline">Voir</a>
+                      {cniSignedUrl && (
+                        <a href={cniSignedUrl} target="_blank" rel="noreferrer"
+                          className="text-xs text-gray-900 font-semibold hover:underline">Voir</a>
+                      )}
                     </div>
                   )}
                   <label className="flex items-center justify-center gap-2 w-full py-3.5 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-gray-900 transition-all">
@@ -475,8 +513,10 @@ const MonProfilPrestataire = () => {
                   {profil?.cv_url && (
                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200 mb-2">
                       <p className="text-xs text-gray-600 flex-1">CV uploadé</p>
-                      <a href={profil.cv_url} target="_blank" rel="noreferrer"
-                        className="text-xs text-gray-900 font-semibold hover:underline">Voir</a>
+                      {cvSignedUrl && (
+                        <a href={cvSignedUrl} target="_blank" rel="noreferrer"
+                          className="text-xs text-gray-900 font-semibold hover:underline">Voir</a>
+                      )}
                     </div>
                   )}
                   <label className="flex items-center justify-center gap-2 w-full py-3.5 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-gray-900 transition-all">
