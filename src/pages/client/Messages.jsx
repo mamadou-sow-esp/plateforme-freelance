@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import Navbar from '../../components/layout/Navbar'
 import Avatar from '../../components/ui/Avatar'
+import BackButton from '../../components/ui/BackButton'
 
 const ClientMessages = () => {
   const { profile } = useAuth()
@@ -143,6 +144,7 @@ const ClientMessages = () => {
         {/* Liste conversations */}
         <div className={`${showChat ? 'hidden md:flex' : 'flex'} w-full md:w-80 flex-shrink-0 bg-white border-r border-gray-100 flex-col`}>
           <div className="px-5 py-4 border-b border-gray-100">
+            <BackButton />
             <h2 className="font-bold text-gray-900 text-sm">Conversations</h2>
           </div>
           {loading ? (

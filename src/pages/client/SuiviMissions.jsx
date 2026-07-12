@@ -7,6 +7,7 @@ import Footer from '../../components/layout/Footer'
 import Avatar from '../../components/ui/Avatar'
 import StatusBadge from '../../components/ui/StatusBadge'
 import StarRating from '../../components/ui/StarRating'
+import BackButton from '../../components/ui/BackButton'
 
 const SuiviMissions = () => {
   const { profile } = useAuth()
@@ -92,6 +93,7 @@ const SuiviMissions = () => {
       <Navbar />
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 md:px-6 py-8">
+        <BackButton />
 
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Suivi des missions</h1>

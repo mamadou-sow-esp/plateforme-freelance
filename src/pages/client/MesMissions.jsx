@@ -7,6 +7,7 @@ import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import Avatar from '../../components/ui/Avatar'
 import StatusBadge from '../../components/ui/StatusBadge'
+import BackButton from '../../components/ui/BackButton'
 
 const MesMissions = () => {
   const { profile } = useAuth()
@@ -204,6 +205,7 @@ const MesMissions = () => {
       <Navbar />
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 md:px-6 py-8">
+        <BackButton />
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Mes missions</h1>

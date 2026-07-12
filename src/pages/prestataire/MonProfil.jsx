@@ -5,6 +5,7 @@ import { getSignedDocUrl } from '../../lib/documents'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import VerifiedBadge from '../../components/ui/VerifiedBadge'
+import BackButton from '../../components/ui/BackButton'
 
 const DOC_MAX_SIZE = 10 * 1024 * 1024 // 10 Mo, doit rester cohérent avec la limite du bucket
 const DOC_ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
@@ -279,6 +280,7 @@ const MonProfilPrestataire = () => {
       <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'success' })} />
       <Navbar />
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 md:px-6 py-8">
+        <BackButton />
 
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Mon profil</h1>

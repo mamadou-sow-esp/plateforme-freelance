@@ -7,6 +7,7 @@ import Footer from '../../components/layout/Footer'
 import Avatar from '../../components/ui/Avatar'
 import StarRating from '../../components/ui/StarRating'
 import VerifiedBadge from '../../components/ui/VerifiedBadge'
+import BackButton from '../../components/ui/BackButton'
 
 const getDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371
@@ -107,6 +108,7 @@ const RechercherPrestataire = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 md:px-6 py-8">
+        <BackButton />
 
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight mb-1">

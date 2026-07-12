@@ -7,6 +7,7 @@ import Footer from '../../components/layout/Footer'
 import Avatar from '../../components/ui/Avatar'
 import StatusBadge from '../../components/ui/StatusBadge'
 import StarRating from '../../components/ui/StarRating'
+import BackButton from '../../components/ui/BackButton'
 
 const Historique = () => {
   const { profile } = useAuth()
@@ -72,6 +73,7 @@ const Historique = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 md:px-6 py-8">
+        <BackButton />
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>

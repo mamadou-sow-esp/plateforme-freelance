@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import Avatar from '../../components/ui/Avatar'
+import BackButton from '../../components/ui/BackButton'
 
 const RechercherMission = () => {
   const { profile } = useAuth()
@@ -209,6 +210,7 @@ const RechercherMission = () => {
       <Navbar />
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 md:px-6 py-8">
+        <BackButton />
 
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">Missions disponibles</h1>
