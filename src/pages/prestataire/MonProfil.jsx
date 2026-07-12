@@ -258,6 +258,22 @@ const MonProfilPrestataire = () => {
     }
   }
 
+  const handleDeleteCV = async () => {
+    if (!profil?.cv_url) return
+    if (!confirm('Supprimer votre CV ?')) return
+    setUploadingCV(true)
+    try {
+      await supabase.storage.from('documents').remove([profil.cv_url])
+      await supabase.from('prestataires').update({ cv_url: null }).eq('id', profile?.id)
+      await fetchData()
+      showToast('CV supprimé', 'success')
+    } catch (err) {
+      showToast('Erreur lors de la suppression du CV.', 'error')
+    } finally {
+      setUploadingCV(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'success' })} />
@@ -527,6 +543,10 @@ const MonProfilPrestataire = () => {
                         <a href={cvSignedUrl} target="_blank" rel="noreferrer"
                           className="text-xs text-gray-900 font-semibold hover:underline">Voir</a>
                       )}
+                      <button type="button" onClick={handleDeleteCV} disabled={uploadingCV}
+                        className="text-xs text-red-600 font-semibold hover:underline disabled:opacity-40">
+                        Supprimer
+                      </button>
                     </div>
                   )}
                   <label className="flex items-center justify-center gap-2 w-full py-3.5 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-gray-900 transition-all">
