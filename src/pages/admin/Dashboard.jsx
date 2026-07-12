@@ -170,14 +170,19 @@ const handleRefuserCNI = async (prestataireId) => {
     if (!file) return
     setUploadingLogo(true)
     try {
-      const ext = file.name.split('.').pop()
-      const fileName = 'logo_' + Date.now() + '.' + ext
+      const allowedExt = ['jpg', 'jpeg', 'png', 'webp']
+      const ext = file.name.split('.').pop().toLowerCase()
+      if (!allowedExt.includes(ext)) {
+        throw new Error('Format non supporté. Utilise un fichier JPG, PNG ou WEBP.')
+      }
+      const fileName = 'partenaires/logo_' + Date.now() + '.' + ext
       const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true })
       if (uploadError) throw uploadError
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName)
       setPartenaireForm({ ...partenaireForm, logo_url: urlData.publicUrl })
     } catch (err) {
       console.error(err)
+      alert('Erreur upload logo : ' + err.message)
     } finally {
       setUploadingLogo(false)
     }

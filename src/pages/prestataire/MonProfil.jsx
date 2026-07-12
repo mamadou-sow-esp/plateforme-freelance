@@ -198,6 +198,10 @@ const MonProfilPrestataire = () => {
   const handleUploadCNI = async (e) => {
     const file = e.target.files[0]
     if (!file) return
+    if (profil?.verifie_cni) {
+      showToast('CNI déjà vérifiée, elle ne peut plus être remplacée.', 'error')
+      return
+    }
     if (!DOC_ALLOWED_TYPES.includes(file.type)) {
       showToast('Format non supporté. Utilisez une image (JPG/PNG/WebP) ou un PDF.', 'error')
       return
@@ -496,16 +500,22 @@ const MonProfilPrestataire = () => {
                       )}
                     </div>
                   )}
-                  <label className="flex items-center justify-center gap-2 w-full py-3.5 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-gray-900 transition-all">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                    <span className="text-xs text-gray-500 font-medium">
-                      {uploading ? 'Upload...' : profil?.cni_url ? 'Remplacer la CNI' : 'Uploader la CNI'}
-                    </span>
-                    <input type="file" accept="image/*,.pdf" onChange={handleUploadCNI} className="hidden" disabled={uploading} />
-                  </label>
+                  {profil?.verifie_cni ? (
+                    <p className="text-xs text-gray-400 italic">
+                      CNI vérifiée — contactez le support pour toute correction.
+                    </p>
+                  ) : (
+                    <label className="flex items-center justify-center gap-2 w-full py-3.5 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-gray-900 transition-all">
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      <span className="text-xs text-gray-500 font-medium">
+                        {uploading ? 'Upload...' : profil?.cni_url ? 'Remplacer la CNI' : 'Uploader la CNI'}
+                      </span>
+                      <input type="file" accept="image/*,.pdf" onChange={handleUploadCNI} className="hidden" disabled={uploading} />
+                    </label>
+                  )}
                 </div>
 
                 <div>
