@@ -9,7 +9,6 @@ import Avatar from '../../components/ui/Avatar'
 import StatusBadge from '../../components/ui/StatusBadge'
 import StarRating from '../../components/ui/StarRating'
 import VerifiedBadge from '../../components/ui/VerifiedBadge'
-import BackButton from '../../components/ui/BackButton'
 import { MapPin } from 'lucide-react'
 
 const getDistance = (lat1, lon1, lat2, lon2) => {
@@ -97,7 +96,6 @@ const ClientDashboard = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 md:px-6 py-8">
-        <BackButton />
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">

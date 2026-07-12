@@ -41,6 +41,13 @@ const AppRoutes = () => {
   const { user, profile } = useAuth()
 
   const getHome = () => {
+    // Filet de sécurité : si un lien de réinitialisation de mot de passe
+    // atterrit sur "/" (ex. Site URL Supabase mal configurée côté
+    // dashboard), on redirige quand même vers la page dédiée au lieu
+    // d'afficher la landing page ou le dashboard.
+    if (window.location.hash.includes('type=recovery')) {
+      return <Navigate to={`/reinitialiser-mot-de-passe${window.location.hash}`} replace />
+    }
     // Si pas connecté → landing page
     if (!user) return <LandingPage />
     // Si connecté → redirection selon le rôle

@@ -35,6 +35,18 @@ export const AuthProvider = ({ children }) => {
     // Récupère la session persistée dans le localStorage
     const initAuth = async () => {
       try {
+        // Un lien de réinitialisation de mot de passe atterrit avec
+        // #...&type=recovery dans l'URL : la session qui en découle est
+        // temporaire (juste pour poser un nouveau mot de passe), pas une
+        // vraie connexion. On ne doit pas la refléter dans le contexte
+        // global sous peine d'être redirigé direct vers le dashboard.
+        if (window.location.hash.includes('type=recovery')) {
+          setUser(null)
+          setProfile(null)
+          setLoading(false)
+          return
+        }
+
         const { data: { session } } = await supabase.auth.getSession()
 
         if (session?.user) {
@@ -59,6 +71,18 @@ export const AuthProvider = ({ children }) => {
         if (event === 'SIGNED_OUT') {
           setUser(null)
           setProfile(null)
+          setLoading(false)
+          return
+        }
+
+        // PASSWORD_RECOVERY établit une session Supabase temporaire (nécessaire
+        // pour pouvoir appeler updateUser({ password })), mais ce n'est PAS une
+        // vraie connexion : on ne doit surtout pas remplir le contexte global
+        // (user/profile), sinon getHome() la traite comme un login et redirige
+        // direct vers le dashboard au lieu de laisser la page de réinitialisation
+        // s'afficher. La page ResetPassword gère cette session elle-même, en
+        // direct via supabase.auth, indépendamment de ce contexte.
+        if (event === 'PASSWORD_RECOVERY') {
           setLoading(false)
           return
         }

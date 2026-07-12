@@ -7,7 +7,6 @@ import Footer from '../../components/layout/Footer'
 import Avatar from '../../components/ui/Avatar'
 import StatusBadge from '../../components/ui/StatusBadge'
 import StarRating from '../../components/ui/StarRating'
-import BackButton from '../../components/ui/BackButton'
 
 const AdminDashboard = () => {
   const { profile } = useAuth()
@@ -314,7 +313,6 @@ const handleRefuserCNI = async (prestataireId) => {
       )}
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-10">
-        <BackButton />
 
         <div className="flex items-center justify-between mb-8">
           <div>
