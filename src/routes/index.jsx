@@ -5,6 +5,7 @@ import LandingPage from '../pages/LandingPage'
 // Auth
 import Login from '../pages/auth/Login'
 import Register from '../pages/auth/Register'
+import ResetPassword from '../pages/auth/ResetPassword'
 
 // Client
 import ClientDashboard from '../pages/client/Dashboard'
@@ -62,6 +63,7 @@ const AppRoutes = () => {
         {/* Auth */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/reinitialiser-mot-de-passe" element={<ResetPassword />} />
 
         {/* Client */}
         <Route path="/client/dashboard" element={

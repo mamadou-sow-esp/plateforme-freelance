@@ -15,6 +15,13 @@ const Login = () => {
   // les réutiliser d'abord plutôt que de forcer une nouvelle connexion.
   const [showSwitcher, setShowSwitcher] = useState(savedAccounts.length > 0)
 
+  // Mot de passe oublié : formulaire séparé, affiché à la place du login.
+  const [showForgot, setShowForgot] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotSent, setForgotSent] = useState(false)
+  const [forgotError, setForgotError] = useState('')
+
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
 
   const handleUseAccount = (accountId) => {
@@ -41,6 +48,23 @@ const Login = () => {
     navigate('/')
   }
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault()
+    setForgotError('')
+    setForgotLoading(true)
+
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+      redirectTo: `${window.location.origin}/reinitialiser-mot-de-passe`,
+    })
+
+    setForgotLoading(false)
+    if (resetError) {
+      setForgotError("Impossible d'envoyer l'email. Vérifiez l'adresse et réessayez.")
+      return
+    }
+    setForgotSent(true)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -55,7 +79,66 @@ const Login = () => {
         {/* Card */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-8">
 
-          {showSwitcher ? (
+          {showForgot ? (
+            <div>
+              <button
+                onClick={() => { setShowForgot(false); setForgotSent(false); setForgotError('') }}
+                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-900 transition-colors font-medium mb-5"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Retour à la connexion
+              </button>
+
+              {forgotSent ? (
+                <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-4 text-sm">
+                  Si un compte existe pour <strong>{forgotEmail}</strong>, un email avec un lien de
+                  réinitialisation vient d'être envoyé. Pensez à vérifier vos spams.
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-lg font-bold text-gray-900 mb-1">Mot de passe oublié</h2>
+                  <p className="text-gray-400 text-sm mb-5">
+                    Indiquez votre email, on vous envoie un lien pour le réinitialiser.
+                  </p>
+
+                  {forgotError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-5 text-sm font-medium">
+                      {forgotError}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleForgotPassword} className="space-y-5">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                        Adresse email
+                      </label>
+                      <input
+                        type="email"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        placeholder="vous@exemple.com"
+                        required
+                        className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={forgotLoading}
+                      className="w-full py-3.5 bg-gray-900 text-white font-semibold text-sm rounded-xl hover:bg-black transition-all disabled:opacity-40">
+                      {forgotLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Envoi...
+                        </span>
+                      ) : 'Envoyer le lien'}
+                    </button>
+                  </form>
+                </>
+              )}
+            </div>
+          ) : showSwitcher ? (
             <div className="space-y-2">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                 Comptes sur ce navigateur
@@ -121,6 +204,11 @@ const Login = () => {
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Mot de passe
                 </label>
+                <button type="button"
+                  onClick={() => { setShowForgot(true); setForgotEmail(form.email) }}
+                  className="text-xs text-gray-500 font-medium hover:text-gray-900 hover:underline">
+                  Mot de passe oublié ?
+                </button>
               </div>
               <input
                 type="password"
