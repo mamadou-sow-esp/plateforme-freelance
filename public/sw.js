@@ -1,12 +1,13 @@
 // Service worker - Alicia PWA
 // Bump CACHE_VERSION whenever the caching strategy changes to force old caches to clear.
-const CACHE_VERSION = 'v1'
+const CACHE_VERSION = 'v2'
 const CACHE_NAME = `alicia-cache-${CACHE_VERSION}`
 
 const APP_SHELL = [
   '/',
   '/manifest.webmanifest',
-  '/favicon.svg',
+  '/favicon.ico',
+  '/favicon-32.png',
 ]
 
 // Never cache API / realtime calls (Supabase) - always go to network.
