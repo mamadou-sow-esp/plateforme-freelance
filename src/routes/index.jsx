@@ -6,6 +6,7 @@ import LandingPage from '../pages/LandingPage'
 import Login from '../pages/auth/Login'
 import Register from '../pages/auth/Register'
 import ResetPassword from '../pages/auth/ResetPassword'
+import ConfirmerInscription from '../pages/auth/ConfirmerInscription'
 
 // Client
 import ClientDashboard from '../pages/client/Dashboard'
@@ -48,6 +49,9 @@ const AppRoutes = () => {
     if (window.location.hash.includes('type=recovery')) {
       return <Navigate to={`/reinitialiser-mot-de-passe${window.location.hash}`} replace />
     }
+    if (window.location.hash.includes('type=signup') || window.location.hash.includes('type=magiclink')) {
+      return <Navigate to={`/confirmer-inscription${window.location.hash}`} replace />
+    }
     // Si pas connecté → landing page
     if (!user) return <LandingPage />
     // Si connecté → redirection selon le rôle
@@ -71,6 +75,7 @@ const AppRoutes = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/reinitialiser-mot-de-passe" element={<ResetPassword />} />
+        <Route path="/confirmer-inscription" element={<ConfirmerInscription />} />
 
         {/* Client */}
         <Route path="/client/dashboard" element={

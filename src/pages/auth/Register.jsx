@@ -1,20 +1,18 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import logo from '../../assets/logo.png'
 
 const Register = () => {
-  const navigate = useNavigate()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [emailSent, setEmailSent] = useState(false)
 
   const [form, setForm] = useState({
     nom: '',
     email: '',
     telephone: '',
-    password: '',
-    confirmPassword: '',
     role: '',
   })
 
@@ -43,70 +41,32 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-
-    if (!form.password || form.password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères')
-      return
-    }
-    if (form.password !== form.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas')
-      return
-    }
-
     setLoading(true)
 
     try {
-      // 1. Créer le compte auth
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      // On ne demande pas de mot de passe ici : on envoie d'abord un lien
+      // de confirmation par email pour vérifier que l'adresse existe
+      // vraiment. Le compte est créé (non confirmé), avec nom/téléphone/
+      // rôle attachés en métadonnées ; le mot de passe et le profil ne
+      // sont créés qu'après le clic sur le lien, sur /confirmer-inscription.
+      const { error: otpError } = await supabase.auth.signInWithOtp({
         email: form.email,
-        password: form.password,
+        options: {
+          shouldCreateUser: true,
+          emailRedirectTo: `${window.location.origin}/confirmer-inscription`,
+          data: {
+            nom: form.nom,
+            telephone: form.telephone,
+            role: form.role,
+          },
+        },
       })
 
-      if (signUpError) throw signUpError
-      if (!data.user) throw new Error("Erreur lors de la création du compte")
+      if (otpError) throw otpError
 
-      const userId = data.user.id
-
-      // 2. Créer le profil de base
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          nom: form.nom,
-          email: form.email,
-          telephone: form.telephone,
-          role: form.role,
-        })
-
-      if (profileError) throw profileError
-
-      // 3. Si prestataire, créer la ligne dans prestataires avec toutes les valeurs par défaut
-      if (form.role === 'prestataire') {
-        const { error: prestError } = await supabase
-          .from('prestataires')
-          .insert({
-            id: userId,
-            metier: '',
-            competences: [],
-            prix_min: 0,
-            prix_max: 0,
-            disponible: true,
-            note_moyenne: 0,
-            nb_missions: 0,
-            verifie_cni: false,
-            cni_url: null,
-            cv_url: null,
-            github_url: null,
-            portfolio_url: null,
-            linkedin_url: null,
-          })
-
-        if (prestError) throw prestError
-      }
-
-      navigate('/')
+      setEmailSent(true)
     } catch (err) {
-      setError(err.message || 'Une erreur est survenue lors de l\'inscription')
+      setError(err.message || "Une erreur est survenue lors de l'envoi de l'email")
     } finally {
       setLoading(false)
     }
@@ -278,54 +238,57 @@ const Register = () => {
 
           {/* Étape 3 */}
           {step === 3 && (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <h2 className="font-bold text-gray-900 text-lg mb-1">Sécurisez votre compte</h2>
-                <p className="text-gray-400 text-xs">Choisissez un mot de passe sécurisé</p>
-              </div>
-
-              <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-sm font-bold">{form.nom?.charAt(0).toUpperCase()}</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">{form.nom}</p>
-                    <p className="text-xs text-gray-400">{form.email} · {form.role === 'client' ? 'Client' : 'Prestataire'}</p>
+            <div className="space-y-5">
+              {emailSent ? (
+                <div>
+                  <h2 className="font-bold text-gray-900 text-lg mb-1">Vérifiez votre email</h2>
+                  <p className="text-gray-400 text-xs mb-5">
+                    On a envoyé un lien de confirmation à <strong className="text-gray-700">{form.email}</strong>.
+                    Cliquez dessus pour vérifier votre adresse et choisir votre mot de passe.
+                  </p>
+                  <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-4 text-sm">
+                    Email envoyé ✓ Pensez à vérifier vos spams si vous ne le voyez pas.
                   </div>
                 </div>
-              </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div>
+                    <h2 className="font-bold text-gray-900 text-lg mb-1">Vérifiez votre email</h2>
+                    <p className="text-gray-400 text-xs">
+                      Dernière étape : on vous envoie un lien pour confirmer votre adresse avant de choisir votre mot de passe.
+                    </p>
+                  </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Mot de passe</label>
-                <input type="password" name="password" value={form.password} onChange={handleChange}
-                  placeholder="Min. 6 caractères"
-                  className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
-              </div>
+                  <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <span className="text-white text-sm font-bold">{form.nom?.charAt(0).toUpperCase()}</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">{form.nom}</p>
+                        <p className="text-xs text-gray-400">{form.email} · {form.role === 'client' ? 'Client' : 'Prestataire'}</p>
+                      </div>
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Confirmer le mot de passe</label>
-                <input type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange}
-                  placeholder="Répétez le mot de passe"
-                  className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
-              </div>
-
-              <div className="flex gap-3 mt-2">
-                <button type="button" onClick={() => setStep(2)}
-                  className="flex-1 py-3.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:border-gray-400 transition-all">
-                  Retour
-                </button>
-                <button type="submit" disabled={loading}
-                  className="flex-1 py-3.5 bg-gray-900 text-white font-semibold text-sm rounded-xl hover:bg-black transition-all disabled:opacity-40">
-                  {loading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Création...
-                    </span>
-                  ) : 'Créer mon compte'}
-                </button>
-              </div>
-            </form>
+                  <div className="flex gap-3 mt-2">
+                    <button type="button" onClick={() => setStep(2)}
+                      className="flex-1 py-3.5 border border-gray-200 text-gray-600 font-semibold text-sm rounded-xl hover:border-gray-400 transition-all">
+                      Retour
+                    </button>
+                    <button type="submit" disabled={loading}
+                      className="flex-1 py-3.5 bg-gray-900 text-white font-semibold text-sm rounded-xl hover:bg-black transition-all disabled:opacity-40">
+                      {loading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Envoi...
+                        </span>
+                      ) : 'Envoyer le lien de confirmation'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           )}
 
           <div className="mt-6 pt-6 border-t border-gray-100 text-center">
