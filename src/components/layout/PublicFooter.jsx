@@ -18,8 +18,8 @@ const PublicFooter = () => {
           <div>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Navigation</p>
             <div className="flex flex-col gap-3">
-              <a href="/#fonctionnement" className="text-sm text-gray-400 hover:text-white transition-colors">Comment ça marche</a>
-              <a href="/#fonctionnalites" className="text-sm text-gray-400 hover:text-white transition-colors">Fonctionnalités</a>
+              <a href="/accueil#fonctionnement" className="text-sm text-gray-400 hover:text-white transition-colors">Comment ça marche</a>
+              <a href="/accueil#fonctionnalites" className="text-sm text-gray-400 hover:text-white transition-colors">Fonctionnalités</a>
               <Link to="/faq" className="text-sm text-gray-400 hover:text-white transition-colors">FAQ</Link>
             </div>
           </div>
@@ -50,6 +50,7 @@ const PublicFooter = () => {
 
         <div className="pt-8 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-gray-500">© 2026 Alicia — Tous droits réservés</p>
+          <img src="/founder-logo.png" alt="Keba Foundation" className="h-5 w-auto object-contain" />
           <p className="text-xs text-gray-500">Plateforme freelance du Sénégal</p>
         </div>
       </div>

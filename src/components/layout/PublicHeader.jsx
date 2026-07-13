@@ -5,24 +5,26 @@ import logo from '../../assets/logo.png'
 
 // En-tête partagé par la page vitrine (landing) et ses pages annexes
 // (FAQ, centre d'aide, confidentialité, à propos, contact). Les liens
-// d'ancre pointent vers "/#..." : ça marche depuis n'importe quelle page,
-// pas seulement depuis la landing elle-même.
+// d'ancre pointent vers "/accueil#..." (et pas juste "/#...") car pour un
+// utilisateur connecté, "/" redirige automatiquement vers son dashboard
+// (voir getHome() dans routes/index.jsx) — "/accueil" affiche toujours
+// la landing page, peu importe l'état de connexion.
 const PublicHeader = () => {
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
       <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-        <Link to="/">
+        <Link to="/accueil">
           <img src={logo} alt="Alicia" className="h-10 w-auto object-contain" />
         </Link>
 
         {/* Liens desktop */}
         <div className="hidden md:flex items-center gap-8">
-          <a href="/#fonctionnement" className="text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium">
+          <a href="/accueil#fonctionnement" className="text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium">
             Comment ça marche
           </a>
-          <a href="/#fonctionnalites" className="text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium">
+          <a href="/accueil#fonctionnalites" className="text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium">
             Fonctionnalités
           </a>
           <Link to="/faq" className="text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium">
@@ -53,12 +55,12 @@ const PublicHeader = () => {
       {/* Menu mobile déroulant */}
       {menuOpen && (
         <div className="md:hidden bg-white border-t border-gray-100 px-4 py-4 space-y-1">
-          <a href="/#fonctionnement"
+          <a href="/accueil#fonctionnement"
             onClick={() => setMenuOpen(false)}
             className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-all">
             Comment ça marche
           </a>
-          <a href="/#fonctionnalites"
+          <a href="/accueil#fonctionnalites"
             onClick={() => setMenuOpen(false)}
             className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-all">
             Fonctionnalités

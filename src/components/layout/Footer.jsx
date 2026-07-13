@@ -52,8 +52,9 @@ const Footer = () => {
       )}
 
       <div className={`${partenaires.length > 0 ? 'border-t border-gray-100' : ''} max-w-7xl mx-auto px-6 py-4`}>
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-gray-400">2026 Alicia - By KEBA FOUNDATION</p>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs text-gray-400">2026 Alicia</p>
+          <img src="/founder2-logo.png" alt="Keba Foundation" className="h-5 w-auto object-contain" />
           <p className="text-xs text-gray-400">Tous droits réservés</p>
         </div>
       </div>
