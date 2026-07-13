@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -16,13 +16,22 @@ const CompleterProfil = () => {
   const [locationSaved, setLocationSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [categories, setCategories] = useState([])
 
   const [form, setForm] = useState({
     localisation: '',
     metier: '',
     competences: '',
     prix_min: '',
+    categorie_id: '',
   })
+
+  useEffect(() => {
+    if (role === 'prestataire') {
+      supabase.from('categories').select('*').order('nom')
+        .then(({ data }) => setCategories(data || []))
+    }
+  }, [role])
 
   const goToDashboard = () => {
     if (role === 'prestataire') navigate('/prestataire/dashboard', { replace: true })
@@ -108,6 +117,7 @@ const CompleterProfil = () => {
           metier: form.metier,
           competences: competencesArray,
           prix_min: parseFloat(form.prix_min) || 0,
+          categorie_id: form.categorie_id || null,
         }).eq('id', profile?.id)
         if (prestError) throw prestError
       }
@@ -201,7 +211,15 @@ const CompleterProfil = () => {
             <div className="space-y-4 pt-2 border-t border-gray-100">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider pt-4">Votre activité</p>
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-2">Métier / catégorie</label>
+                <label className="block text-xs font-medium text-gray-400 mb-2">Catégorie</label>
+                <select name="categorie_id" value={form.categorie_id} onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white">
+                  <option value="">Choisir une catégorie</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-2">Métier</label>
                 <input type="text" name="metier" value={form.metier} onChange={handleChange}
                   placeholder="Ex : Électricien, Couturière, Développeur..."
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />

@@ -45,6 +45,7 @@ const RechercherPrestataire = () => {
       p_lat: geo.location?.lat ?? null,
       p_lon: geo.location?.lon ?? null,
       p_disponible_only: filtres.disponible,
+      p_categorie_id: filtres.categorie || null,
     })
     let result = data || []
 
@@ -231,7 +232,9 @@ const RechercherPrestataire = () => {
                           <p className="text-sm font-bold text-gray-900 truncate">{p.nom}</p>
                           {p.verifie_cni && <VerifiedBadge size="sm" />}
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5 truncate">{p.metier}</p>
+                        <p className="text-xs text-gray-400 mt-0.5 truncate">
+                          {p.metier}{p.categorie_nom ? ' · ' + p.categorie_nom : ''}
+                        </p>
                       </div>
                     </div>
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-1 ${p.disponible ? 'bg-emerald-400' : 'bg-gray-300'}`} />

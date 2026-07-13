@@ -165,7 +165,9 @@ const ProfilPrestataire = () => {
                   <h1 className="text-lg md:text-xl font-bold text-gray-900">{prestataire.nom}</h1>
                   {profilData.verifie_cni && <VerifiedBadge size="md" />}
                 </div>
-                <p className="text-sm text-gray-500 mt-0.5">{profilData.metier}</p>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {profilData.metier}{profilData.categorie_nom ? ' · ' + profilData.categorie_nom : ''}
+                </p>
                 <p className="text-xs text-gray-400 mt-0.5">{prestataire.localisation}</p>
                 {statsReelles.note_moyenne > 0 && (
                   <div className="flex items-center gap-2 mt-2">

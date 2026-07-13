@@ -53,15 +53,22 @@ const MonProfilPrestataire = () => {
   const [cniSignedUrl, setCniSignedUrl] = useState(null)
   const [cvSignedUrl, setCvSignedUrl] = useState(null)
   const [toast, setToast] = useState({ message: '', type: 'success' })
+  const [categories, setCategories] = useState([])
 
   const [form, setForm] = useState({
     metier: '', competences: '', prix_min: '',
     disponible: true, localisation: '', bio: '',
     github_url: '', portfolio_url: '', linkedin_url: '',
-    moyens_paiement: [],
+    moyens_paiement: [], categorie_id: '',
   })
 
   useEffect(() => { if (profile?.id) fetchData() }, [profile?.id])
+  useEffect(() => { fetchCategories() }, [])
+
+  const fetchCategories = async () => {
+    const { data } = await supabase.from('categories').select('*').order('nom')
+    setCategories(data || [])
+  }
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type })
@@ -91,6 +98,7 @@ const MonProfilPrestataire = () => {
         portfolio_url: prestData.portfolio_url || '',
         linkedin_url: prestData.linkedin_url || '',
         moyens_paiement: prestData.moyens_paiement || [],
+        categorie_id: prestData.categorie_id || '',
       })
       // Le bucket "documents" est privé : on génère des URLs signées
       // temporaires pour afficher/ouvrir ses propres CNI et CV.
@@ -127,6 +135,7 @@ const MonProfilPrestataire = () => {
         portfolio_url: form.portfolio_url || null,
         linkedin_url: form.linkedin_url || null,
         moyens_paiement: form.moyens_paiement,
+        categorie_id: form.categorie_id || null,
       }).eq('id', profile?.id)
       if (prestError) throw prestError
 
@@ -445,6 +454,15 @@ const MonProfilPrestataire = () => {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6">
               <h2 className="font-bold text-gray-900 text-sm mb-5">Mes services</h2>
               <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Catégorie</label>
+                  <select name="categorie_id" value={form.categorie_id} onChange={handleChange}
+                    className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white">
+                    <option value="">Choisir une catégorie</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1.5">Permet aux clients de vous trouver via le filtre par catégorie</p>
+                </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Métier</label>
                   <input type="text" name="metier" value={form.metier} onChange={handleChange}
