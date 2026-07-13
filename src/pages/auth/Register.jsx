@@ -42,15 +42,18 @@ const Register = () => {
       setCheckingDuplicates(true)
       setError('')
       try {
-        const [{ data: emailMatch }, { data: phoneMatch }] = await Promise.all([
-          supabase.from('profiles').select('id').eq('email', form.email).maybeSingle(),
-          supabase.from('profiles').select('id').eq('telephone', form.telephone).maybeSingle(),
-        ])
-        if (emailMatch) {
+        // Vérification via une fonction dédiée qui ne renvoie qu'un
+        // booléen (ne jamais interroger profiles directement en anonyme,
+        // même pour une simple vérification d'existence).
+        const { data: dup } = await supabase.rpc('email_or_telephone_exists', {
+          p_email: form.email,
+          p_telephone: form.telephone,
+        })
+        if (dup?.[0]?.email_taken) {
           setError('Un compte existe déjà avec cet email. Connectez-vous plutôt.')
           return
         }
-        if (phoneMatch) {
+        if (dup?.[0]?.telephone_taken) {
           setError('Ce numéro de téléphone est déjà associé à un autre compte.')
           return
         }

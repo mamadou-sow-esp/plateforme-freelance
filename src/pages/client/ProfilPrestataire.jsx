@@ -24,13 +24,13 @@ const ProfilPrestataire = () => {
   useEffect(() => { fetchData() }, [id])
 
   const fetchData = async () => {
-    // Profil de base
-    const { data: profileData } = await supabase
-      .from('profiles').select('*').eq('id', id).single()
-
-    // Profil prestataire
-    const { data: prestData } = await supabase
-      .from('prestataires').select('*').eq('id', id).single()
+    // Profil public (nom/avatar/localisation/bio) + infos prestataire
+    // (métier, prix, liens...) en un seul appel, via une fonction qui ne
+    // renvoie jamais d'informations sensibles (email, téléphone, GPS
+    // exact, statut CNI) — voir get_prestataires_directory().
+    const { data: directoryData } = await supabase.rpc('get_prestataires_directory', { p_ids: [id] })
+    const profileData = directoryData?.[0] || null
+    const prestData = directoryData?.[0] || null
 
     // Avis reçus (les avis masqués par l'administration ne sont pas affichés publiquement)
     const { data: avisData } = await supabase

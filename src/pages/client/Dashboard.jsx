@@ -11,18 +11,6 @@ import StarRating from '../../components/ui/StarRating'
 import VerifiedBadge from '../../components/ui/VerifiedBadge'
 import { MapPin } from 'lucide-react'
 
-const getDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371
-  const dLat = ((lat2 - lat1) * Math.PI) / 180
-  const dLon = ((lon2 - lon1) * Math.PI) / 180
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-    Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2)
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
 const ClientDashboard = () => {
   const { profile } = useAuth()
   const navigate = useNavigate()
@@ -36,10 +24,14 @@ const ClientDashboard = () => {
 
   useEffect(() => {
     fetchMissions()
-    fetchPrestataires()
     geo.startWatching()
     setGeoActive(true)
   }, [])
+
+  // Refetch dès que la position GPS devient disponible pour récupérer les
+  // distances (calculées côté serveur), puis une seule fois sans position
+  // si la géoloc n'est jamais accordée.
+  useEffect(() => { fetchPrestataires() }, [geo.location])
 
   const fetchMissions = async () => {
     const { data } = await supabase
@@ -53,10 +45,13 @@ const ClientDashboard = () => {
   }
 
   const fetchPrestataires = async () => {
-    const { data } = await supabase
-      .from('prestataires')
-      .select('*, profile:profiles(id, nom, localisation, avatar_url, bio, latitude, longitude)')
-      .eq('disponible', true)
+    // Distance calculée côté serveur : le frontend ne reçoit jamais les
+    // coordonnées GPS brutes des prestataires (voir fonction RPC).
+    const { data } = await supabase.rpc('get_prestataires_directory', {
+      p_lat: geo.location?.lat ?? null,
+      p_lon: geo.location?.lon ?? null,
+      p_disponible_only: true,
+    })
     setPrestataires(data || [])
     setLoadingPrestataires(false)
   }
@@ -74,12 +69,7 @@ const ClientDashboard = () => {
   }
 
   const prestatairesProches = [...prestataires]
-    .map(p => ({
-      ...p,
-      distance: geo.location && p.profile?.latitude && p.profile?.longitude
-        ? getDistance(geo.location.lat, geo.location.lon, p.profile.latitude, p.profile.longitude)
-        : null
-    }))
+    .map(p => ({ ...p, distance: p.distance_km }))
     .sort((a, b) => {
       if (a.distance !== null && b.distance !== null) return a.distance - b.distance
       if (a.distance !== null) return -1
@@ -179,11 +169,11 @@ const ClientDashboard = () => {
               {prestatairesProches.map((p) => (
                 <div key={p.id}
                   className="px-5 py-4 flex items-center gap-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50"
-                  onClick={() => navigate('/client/prestataire/' + p.profile?.id)}>
-                  <Avatar url={p.profile?.avatar_url} nom={p.profile?.nom} size="md" />
+                  onClick={() => navigate('/client/prestataire/' + p.id)}>
+                  <Avatar url={p.avatar_url} nom={p.nom} size="md" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-bold text-gray-900 truncate">{p.profile?.nom}</p>
+                      <p className="text-sm font-bold text-gray-900 truncate">{p.nom}</p>
                       {p.verifie_cni && <VerifiedBadge size="sm" />}
                     </div>
                     <p className="text-xs text-gray-400 truncate mt-0.5">{p.metier}</p>
@@ -200,8 +190,8 @@ const ClientDashboard = () => {
                           {formatDistance(p.distance)}
                         </span>
                       ) : (
-                        p.profile?.localisation && (
-                          <span className="text-xs text-gray-400">{p.profile.localisation}</span>
+                        p.localisation && (
+                          <span className="text-xs text-gray-400">{p.localisation}</span>
                         )
                       )}
                     </div>

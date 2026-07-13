@@ -9,18 +9,6 @@ import StarRating from '../../components/ui/StarRating'
 import VerifiedBadge from '../../components/ui/VerifiedBadge'
 import BackButton from '../../components/ui/BackButton'
 
-const getDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371
-  const dLat = ((lat2 - lat1) * Math.PI) / 180
-  const dLon = ((lon2 - lon1) * Math.PI) / 180
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-    Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2)
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
 const RechercherPrestataire = () => {
   const navigate = useNavigate()
   const [prestataires, setPrestataires] = useState([])
@@ -50,34 +38,33 @@ const RechercherPrestataire = () => {
 
   const fetchPrestataires = async () => {
     setLoading(true)
-    let query = supabase
-      .from('prestataires')
-      .select('*, profile:profiles(id, nom, localisation, avatar_url, bio, latitude, longitude)')
-    if (filtres.disponible) query = query.eq('disponible', true)
-    if (filtres.certifie) query = query.eq('verifie_cni', true)
-    if (filtres.budget) query = query.lte('prix_min', filtres.budget)
-    const { data } = await query
+    // La distance est calculée côté serveur (fonction RPC) : le frontend ne
+    // reçoit jamais les coordonnées GPS brutes des prestataires, seulement
+    // la distance déjà calculée par rapport à la position du client.
+    const { data } = await supabase.rpc('get_prestataires_directory', {
+      p_lat: geo.location?.lat ?? null,
+      p_lon: geo.location?.lon ?? null,
+      p_disponible_only: filtres.disponible,
+    })
     let result = data || []
+
+    if (filtres.certifie) result = result.filter(p => p.verifie_cni)
+    if (filtres.budget) result = result.filter(p => (p.prix_min ?? 0) <= Number(filtres.budget))
 
     if (search) {
       result = result.filter(p =>
         p.metier?.toLowerCase().includes(search.toLowerCase()) ||
-        p.profile?.nom?.toLowerCase().includes(search.toLowerCase()) ||
+        p.nom?.toLowerCase().includes(search.toLowerCase()) ||
         p.competences?.some(c => c.toLowerCase().includes(search.toLowerCase()))
       )
     }
     if (filtres.localisation) {
       result = result.filter(p =>
-        p.profile?.localisation?.toLowerCase().includes(filtres.localisation.toLowerCase())
+        p.localisation?.toLowerCase().includes(filtres.localisation.toLowerCase())
       )
     }
 
-    result = result.map(p => ({
-      ...p,
-      distance: geo.location && p.profile?.latitude && p.profile?.longitude
-        ? getDistance(geo.location.lat, geo.location.lon, p.profile.latitude, p.profile.longitude)
-        : null
-    }))
+    result = result.map(p => ({ ...p, distance: p.distance_km }))
 
     if (filtres.proximite && geo.location) {
       result.sort((a, b) => {
@@ -238,10 +225,10 @@ const RechercherPrestataire = () => {
                 <div className="p-4 md:p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <Avatar url={p.profile?.avatar_url} nom={p.profile?.nom} size="md" />
+                      <Avatar url={p.avatar_url} nom={p.nom} size="md" />
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="text-sm font-bold text-gray-900 truncate">{p.profile?.nom}</p>
+                          <p className="text-sm font-bold text-gray-900 truncate">{p.nom}</p>
                           {p.verifie_cni && <VerifiedBadge size="sm" />}
                         </div>
                         <p className="text-xs text-gray-400 mt-0.5 truncate">{p.metier}</p>
@@ -250,8 +237,8 @@ const RechercherPrestataire = () => {
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-1 ${p.disponible ? 'bg-emerald-400' : 'bg-gray-300'}`} />
                   </div>
 
-                  {p.profile?.bio && (
-                    <p className="text-xs text-gray-500 leading-relaxed mb-3 line-clamp-2">{p.profile.bio}</p>
+                  {p.bio && (
+                    <p className="text-xs text-gray-500 leading-relaxed mb-3 line-clamp-2">{p.bio}</p>
                   )}
 
                   <div className="flex items-center gap-3 mb-3 flex-wrap">
@@ -286,14 +273,14 @@ const RechercherPrestataire = () => {
                 <div className="px-4 md:px-5 py-3 border-t border-gray-50 bg-gray-50/50">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <p className="text-xs text-gray-400">{p.profile?.localisation || 'Dakar'}</p>
+                      <p className="text-xs text-gray-400">{p.localisation || 'Dakar'}</p>
                       <p className="text-sm font-bold text-gray-900 mt-0.5">
                         À partir de {p.prix_min?.toLocaleString()} FCFA
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Link to={'/client/prestataire/' + p.profile?.id}
+                    <Link to={'/client/prestataire/' + p.id}
                       className="flex-1 py-2 text-center border border-gray-200 text-gray-700 text-xs font-semibold rounded-xl hover:bg-gray-100 transition-all">
                       Voir profil
                     </Link>
