@@ -135,7 +135,22 @@ const ConfirmerInscription = () => {
         telephone,
         role,
       })
-      if (profileError) throw profileError
+      if (profileError) {
+        // 23505 = violation de contrainte unique (email ou téléphone déjà
+        // utilisé par un autre compte). On transforme l'erreur Postgres
+        // brute en message compréhensible.
+        if (profileError.code === '23505') {
+          const msg = profileError.message || ''
+          if (msg.includes('email')) {
+            throw new Error('Un compte existe déjà avec cet email. Connectez-vous plutôt.')
+          }
+          if (msg.includes('telephone')) {
+            throw new Error('Ce numéro de téléphone est déjà associé à un autre compte.')
+          }
+          throw new Error('Ces informations sont déjà utilisées par un autre compte.')
+        }
+        throw profileError
+      }
 
       if (role === 'prestataire') {
         const { error: prestError } = await supabase.from('prestataires').insert({

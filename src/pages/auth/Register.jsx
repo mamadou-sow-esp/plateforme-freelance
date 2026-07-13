@@ -10,6 +10,7 @@ const Register = () => {
   const [error, setError] = useState('')
   const [emailSent, setEmailSent] = useState(false)
   const [emailTouched, setEmailTouched] = useState(false)
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false)
 
   const [form, setForm] = useState({
     nom: '',
@@ -23,7 +24,7 @@ const Register = () => {
     setError('')
   }
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (step === 1) {
       if (!form.nom || !form.email || !form.telephone) {
         setError('Veuillez remplir tous les champs')
@@ -33,6 +34,32 @@ const Register = () => {
         setEmailTouched(true)
         setError('Adresse email invalide')
         return
+      }
+
+      // On vérifie tout de suite si l'email ou le téléphone sont déjà pris,
+      // plutôt que de laisser l'utilisateur passer par tout le flux de
+      // confirmation par email pour se le prendre à la fin.
+      setCheckingDuplicates(true)
+      setError('')
+      try {
+        const [{ data: emailMatch }, { data: phoneMatch }] = await Promise.all([
+          supabase.from('profiles').select('id').eq('email', form.email).maybeSingle(),
+          supabase.from('profiles').select('id').eq('telephone', form.telephone).maybeSingle(),
+        ])
+        if (emailMatch) {
+          setError('Un compte existe déjà avec cet email. Connectez-vous plutôt.')
+          return
+        }
+        if (phoneMatch) {
+          setError('Ce numéro de téléphone est déjà associé à un autre compte.')
+          return
+        }
+      } catch (err) {
+        // On ne bloque pas l'inscription si la vérification échoue pour
+        // une raison technique (réseau, etc.) — l'unicité reste garantie
+        // par la base de données à la création du compte.
+      } finally {
+        setCheckingDuplicates(false)
       }
     }
     if (step === 2) {
@@ -186,9 +213,14 @@ const Register = () => {
                 </div>
               </div>
 
-              <button type="button" onClick={handleNextStep}
-                className="w-full py-3.5 bg-gray-900 text-white font-semibold text-sm rounded-xl hover:bg-black transition-all mt-2">
-                Continuer
+              <button type="button" onClick={handleNextStep} disabled={checkingDuplicates}
+                className="w-full py-3.5 bg-gray-900 text-white font-semibold text-sm rounded-xl hover:bg-black transition-all mt-2 disabled:opacity-40">
+                {checkingDuplicates ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Vérification...
+                  </span>
+                ) : 'Continuer'}
               </button>
             </div>
           )}
