@@ -47,7 +47,26 @@ export const AuthProvider = ({ children }) => {
           return
         }
 
-        const { data: { session } } = await supabase.auth.getSession()
+        // Filet de sécurité : sur certains réseaux (surtout au tout premier
+        // chargement d'un nom de domaine, DNS/TLS pas encore "chauds"),
+        // supabase.auth.getSession() peut rester bloqué anormalement
+        // longtemps. Comme tout l'app attend que `loading` passe à false
+        // pour s'afficher, un blocage ici = page blanche jusqu'au refresh.
+        // On borne donc l'attente à 8s.
+        const timeout = new Promise((resolve) => setTimeout(() => resolve({ timedOut: true }), 8000))
+        const result = await Promise.race([
+          supabase.auth.getSession().then((r) => ({ ...r, timedOut: false })),
+          timeout,
+        ])
+
+        if (result.timedOut) {
+          console.error('initAuth: getSession a expiré (8s), poursuite sans session')
+          setUser(null)
+          setProfile(null)
+          return
+        }
+
+        const { data: { session } } = result
 
         if (session?.user) {
           setUser(session.user)
@@ -114,7 +133,11 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, signOut, switchAccount, fetchProfile }}>
-      {!loading && children}
+      {loading ? (
+        <div className="min-h-screen flex items-center justify-center bg-white">
+          <div className="w-8 h-8 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
+        </div>
+      ) : children}
     </AuthContext.Provider>
   )
 }
