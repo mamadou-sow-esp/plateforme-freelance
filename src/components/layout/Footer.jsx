@@ -26,26 +26,23 @@ const Footer = () => {
           </p>
           <div className="flex items-center justify-center flex-wrap gap-10">
             {partenaires.map(p => (
-              <a
+              <div
                 key={p.id}
-                href={p.site_url || '#'}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-2 group transition-all duration-300"
+                className="flex items-center gap-2"
               >
                 {p.logo_url ? (
                   <img
                     src={p.logo_url}
                     alt={p.nom}
-                    className="h-10 w-auto object-contain filter-none opacity-100 group-hover:scale-110 transition-all duration-300"
+                    className="h-10 w-auto object-contain filter-none opacity-100"
                     style={{ maxWidth: '140px' }}
                   />
                 ) : (
-                  <span className="text-base font-bold text-gray-700 group-hover:text-black transition-all">
+                  <span className="text-base font-bold text-gray-700">
                     {p.nom}
                   </span>
                 )}
-              </a>
+              </div>
             ))}
           </div>
         </div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { reverseGeocode } from '../../lib/geocoding'
 import logo from '../../assets/logo.png'
 
 const CompleterProfil = () => {
@@ -68,6 +69,12 @@ const CompleterProfil = () => {
             .update({ latitude, longitude }).eq('id', profile?.id)
           if (geoError) throw geoError
           setLocationSaved(true)
+
+          // Remplit automatiquement la localisation texte avec l'adresse détectée
+          const adresse = await reverseGeocode(latitude, longitude)
+          if (adresse) {
+            setForm(prev => ({ ...prev, localisation: adresse }))
+          }
         } catch (err) {
           setError('Erreur lors de la sauvegarde de la position')
         } finally {

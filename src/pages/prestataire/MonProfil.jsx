@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { getSignedDocUrl } from '../../lib/documents'
+import { reverseGeocode } from '../../lib/geocoding'
+import { MOYENS_PAIEMENT } from '../../lib/moyensPaiement'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import VerifiedBadge from '../../components/ui/VerifiedBadge'
@@ -20,11 +22,17 @@ const Toast = ({ message, type = 'success', onClose }) => {
       : type === 'error' ? 'bg-red-50 border-red-200 text-red-700'
       : 'bg-white border-gray-200 text-gray-900'
     }`}>
-      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-        type === 'location' ? 'bg-emerald-500 animate-pulse'
-        : type === 'error' ? 'bg-red-500'
-        : 'bg-emerald-500'
-      }`} />
+      {type === 'location' ? (
+        <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ) : (
+        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+          type === 'error' ? 'bg-red-500' : 'bg-emerald-500'
+        }`} />
+      )}
       <p className="text-sm font-medium flex-1">{message}</p>
       <button onClick={onClose} className="text-gray-400 hover:text-gray-600 font-bold flex-shrink-0 text-lg leading-none">×</button>
     </div>
@@ -50,6 +58,7 @@ const MonProfilPrestataire = () => {
     metier: '', competences: '', prix_min: '',
     disponible: true, localisation: '', bio: '',
     github_url: '', portfolio_url: '', linkedin_url: '',
+    moyens_paiement: [],
   })
 
   useEffect(() => { if (profile?.id) fetchData() }, [profile?.id])
@@ -81,6 +90,7 @@ const MonProfilPrestataire = () => {
         github_url: prestData.github_url || '',
         portfolio_url: prestData.portfolio_url || '',
         linkedin_url: prestData.linkedin_url || '',
+        moyens_paiement: prestData.moyens_paiement || [],
       })
       // Le bucket "documents" est privé : on génère des URLs signées
       // temporaires pour afficher/ouvrir ses propres CNI et CV.
@@ -95,6 +105,15 @@ const MonProfilPrestataire = () => {
     setForm({ ...form, [e.target.name]: val })
   }
 
+  const handleToggleMoyenPaiement = (id) => {
+    setForm((prev) => ({
+      ...prev,
+      moyens_paiement: prev.moyens_paiement.includes(id)
+        ? prev.moyens_paiement.filter((m) => m !== id)
+        : [...prev.moyens_paiement, id],
+    }))
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -107,6 +126,7 @@ const MonProfilPrestataire = () => {
         github_url: form.github_url || null,
         portfolio_url: form.portfolio_url || null,
         linkedin_url: form.linkedin_url || null,
+        moyens_paiement: form.moyens_paiement,
       }).eq('id', profile?.id)
       if (prestError) throw prestError
 
@@ -140,8 +160,16 @@ const MonProfilPrestataire = () => {
             .update({ latitude, longitude }).eq('id', profile?.id)
           if (error) throw error
           setLocationSaved(true)
+
+          // Remplit automatiquement la localisation texte avec l'adresse détectée
+          const adresse = await reverseGeocode(latitude, longitude)
+          if (adresse) {
+            setForm(prev => ({ ...prev, localisation: adresse }))
+            await supabase.from('profiles').update({ localisation: adresse }).eq('id', profile?.id)
+          }
+
           setDetectingLocation(false)
-          showToast(`📍 Localisation mise à jour ! Précision : ${Math.round(accuracy)} m`, 'location')
+          showToast(`Localisation mise à jour ! Précision : ${Math.round(accuracy)} m`, 'location')
         } catch (err) {
           showToast('Erreur lors de la sauvegarde de la position', 'error')
           setDetectingLocation(false)
@@ -447,6 +475,39 @@ const MonProfilPrestataire = () => {
                     <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${form.disponible ? 'left-5' : 'left-0.5'}`} />
                   </button>
                 </div>
+              </div>
+            </div>
+
+            {/* Moyens de paiement */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6">
+              <h2 className="font-bold text-gray-900 text-sm mb-1">Moyens de paiement acceptés</h2>
+              <p className="text-xs text-gray-400 mb-5">
+                Indiquez comment vos clients peuvent vous payer (en dehors de l'application). Visible sur votre profil public.
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                {MOYENS_PAIEMENT.map((moyen) => {
+                  const selected = form.moyens_paiement.includes(moyen.id)
+                  return (
+                    <button type="button" key={moyen.id} onClick={() => handleToggleMoyenPaiement(moyen.id)}
+                      className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                        selected ? 'border-gray-900 bg-gray-50' : 'border-gray-100 hover:border-gray-200'
+                      }`}>
+                      {moyen.logo ? (
+                        <img src={moyen.logo} alt={moyen.label} className="w-10 h-10 rounded-lg object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+                          <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                      )}
+                      <span className={`text-xs font-semibold text-center ${selected ? 'text-gray-900' : 'text-gray-500'}`}>
+                        {moyen.label}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 

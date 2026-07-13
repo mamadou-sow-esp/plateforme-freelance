@@ -166,24 +166,6 @@ const ClientDashboard = () => {
             </div>
           )}
 
-          {/* Précision GPS */}
-          {geo.location?.accuracy && (
-            <div className="mx-5 mt-3">
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
-                  <div className={`h-1 rounded-full transition-all ${
-                    geo.location.accuracy < 50 ? 'bg-emerald-500 w-full'
-                    : geo.location.accuracy < 200 ? 'bg-amber-400 w-2/3'
-                    : 'bg-red-400 w-1/3'
-                  }`} />
-                </div>
-                <span className="text-xs text-gray-400 whitespace-nowrap">
-                  Précision : {Math.round(geo.location.accuracy)} m
-                </span>
-              </div>
-            </div>
-          )}
-
           {loadingPrestataires ? (
             <div className="py-10 flex items-center justify-center">
               <div className="w-7 h-7 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />

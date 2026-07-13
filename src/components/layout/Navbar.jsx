@@ -125,7 +125,7 @@ const Navbar = () => {
 
       {/* Menu mobile */}
       {menuOpen && (
-        <div className="lg:hidden border-t border-gray-100 bg-white px-4 py-3 space-y-1">
+        <div className="lg:hidden border-t border-gray-200 bg-gray-200 shadow-modal px-4 py-3 space-y-1">
           {links.map(link => (
             <Link
               key={link.to}

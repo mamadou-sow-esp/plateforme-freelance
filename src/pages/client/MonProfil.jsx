@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { reverseGeocode } from '../../lib/geocoding'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import BackButton from '../../components/ui/BackButton'
@@ -14,11 +15,17 @@ const Toast = ({ message, type = 'success', onClose }) => {
       : type === 'error' ? 'bg-red-50 border-red-200 text-red-700'
       : 'bg-white border-gray-200 text-gray-900'
     }`}>
-      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-        type === 'location' ? 'bg-emerald-500 animate-pulse'
-        : type === 'error' ? 'bg-red-500'
-        : 'bg-emerald-500'
-      }`} />
+      {type === 'location' ? (
+        <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      ) : (
+        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+          type === 'error' ? 'bg-red-500' : 'bg-emerald-500'
+        }`} />
+      )}
       <p className="text-sm font-medium flex-1">{message}</p>
       <button onClick={onClose} className="text-gray-400 hover:text-gray-600 font-bold flex-shrink-0 text-lg leading-none">×</button>
     </div>
@@ -34,7 +41,7 @@ const MonProfilClient = () => {
   const [locationSaved, setLocationSaved] = useState(false)
   const [toast, setToast] = useState({ message: '', type: 'success' })
   const [form, setForm] = useState({
-    nom: '', telephone: '', localisation: '', bio: ''
+    nom: '', telephone: '', localisation: ''
   })
 
   useEffect(() => { if (profile?.id) fetchProfileData() }, [profile?.id])
@@ -54,7 +61,6 @@ const MonProfilClient = () => {
         nom: data.nom || '',
         telephone: data.telephone || '',
         localisation: data.localisation || '',
-        bio: data.bio || '',
       })
     }
   }
@@ -68,7 +74,6 @@ const MonProfilClient = () => {
         nom: form.nom,
         telephone: form.telephone,
         localisation: form.localisation,
-        bio: form.bio,
       }).eq('id', profile?.id)
       if (error) throw error
       await fetchProfileData()
@@ -95,8 +100,16 @@ const MonProfilClient = () => {
             .update({ latitude, longitude }).eq('id', profile?.id)
           if (error) throw error
           setLocationSaved(true)
+
+          // Remplit automatiquement la localisation texte avec l'adresse détectée
+          const adresse = await reverseGeocode(latitude, longitude)
+          if (adresse) {
+            setForm(prev => ({ ...prev, localisation: adresse }))
+            await supabase.from('profiles').update({ localisation: adresse }).eq('id', profile?.id)
+          }
+
           setDetectingLocation(false)
-          showToast(`📍 Localisation mise à jour ! Précision : ${Math.round(accuracy)} m`, 'location')
+          showToast(`Localisation mise à jour ! Précision : ${Math.round(accuracy)} m`, 'location')
         } catch (err) {
           showToast('Erreur lors de la sauvegarde de la position', 'error')
           setDetectingLocation(false)
@@ -218,12 +231,6 @@ const MonProfilClient = () => {
                 <input type="text" name="localisation" value={form.localisation} onChange={handleChange}
                   placeholder="Dakar, Plateau"
                   className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Bio</label>
-                <textarea name="bio" value={form.bio} onChange={handleChange} rows={3}
-                  placeholder="Décrivez-vous en quelques mots..."
-                  className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white resize-none" />
               </div>
             </div>
           </div>

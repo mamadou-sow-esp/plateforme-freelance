@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { getSignedDocUrl } from '../../lib/documents'
+import { MOYENS_PAIEMENT } from '../../lib/moyensPaiement'
 import Navbar from '../../components/layout/Navbar'
 import Footer from '../../components/layout/Footer'
 import Avatar from '../../components/ui/Avatar'
@@ -227,6 +228,30 @@ const ProfilPrestataire = () => {
               </button>
             </div>
           </div>
+
+          {/* Moyens de paiement acceptés */}
+          {profilData.moyens_paiement && profilData.moyens_paiement.length > 0 && (
+            <div className="mb-6">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Moyens de paiement acceptés</p>
+              <div className="flex flex-wrap gap-3">
+                {MOYENS_PAIEMENT.filter((m) => profilData.moyens_paiement.includes(m.id)).map((moyen) => (
+                  <div key={moyen.id} className="flex items-center gap-2 px-3 py-2 border border-gray-100 rounded-xl">
+                    {moyen.logo ? (
+                      <img src={moyen.logo} alt={moyen.label} className="w-6 h-6 rounded object-cover" />
+                    ) : (
+                      <div className="w-6 h-6 rounded bg-emerald-50 flex items-center justify-center">
+                        <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V6m0 12v-2m9-4a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                    )}
+                    <span className="text-xs font-semibold text-gray-700">{moyen.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Compétences */}
           {profilData.competences && profilData.competences.length > 0 && (

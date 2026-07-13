@@ -18,6 +18,7 @@ const Historique = () => {
   const [selected, setSelected] = useState(null)
   const [avisSelected, setAvisSelected] = useState([])
   const [showDetail, setShowDetail] = useState(false)
+  const [confirmingPaiement, setConfirmingPaiement] = useState(false)
 
   useEffect(() => { fetchMissions() }, [])
 
@@ -47,6 +48,23 @@ const Historique = () => {
   const handleLivrer = async (missionId) => {
     await supabase.from('missions').update({ statut: 'livre' }).eq('id', missionId)
     fetchMissions()
+  }
+
+  const handleConfirmerPaiement = async (missionId) => {
+    setConfirmingPaiement(true)
+    try {
+      const { data } = await supabase.from('missions')
+        .update({ paiement_confirme: true })
+        .eq('id', missionId)
+        .select('*, categorie:categories(nom), client:profiles!missions_client_id_fkey(id, nom, localisation, avatar_url)')
+        .single()
+      if (data) {
+        setSelected(data)
+        setMissions((prev) => prev.map((m) => (m.id === missionId ? data : m)))
+      }
+    } finally {
+      setConfirmingPaiement(false)
+    }
   }
 
   const filtres = [
@@ -185,16 +203,56 @@ const Historique = () => {
                   </div>
 
                   {selected.statut === 'valide' ? (
-                    <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-                      <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                        <div className="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-emerald-800">Mission terminée avec succès</p>
+                          <p className="text-xs text-emerald-600 mt-0.5">Vous avez gagné {selected.budget?.toLocaleString()} FCFA</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-emerald-800">Mission terminée avec succès</p>
-                        <p className="text-xs text-emerald-600 mt-0.5">Vous avez gagné {selected.budget?.toLocaleString()} FCFA</p>
-                      </div>
+
+                      {selected.paiement_confirme ? (
+                        <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                          <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-blue-800">Paiement confirmé ✓</p>
+                            <p className="text-xs text-blue-600 mt-0.5">
+                              {selected.paiement_confirme_le && (
+                                <>Confirmé le {new Date(selected.paiement_confirme_le).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} — </>
+                              )}
+                              un reçu a été envoyé au client par email.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                          <div>
+                            <p className="text-sm font-bold text-amber-800">Paiement reçu ?</p>
+                            <p className="text-xs text-amber-600 mt-0.5">
+                              Confirmez que vous avez bien reçu le paiement (Wave, Orange Money, espèces...). Un reçu sera envoyé au client par email.
+                            </p>
+                          </div>
+                          <button onClick={() => handleConfirmerPaiement(selected.id)} disabled={confirmingPaiement}
+                            className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition-all disabled:opacity-40 flex-shrink-0">
+                            {confirmingPaiement ? (
+                              <span className="flex items-center gap-1.5">
+                                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                Confirmation...
+                              </span>
+                            ) : 'Confirmer la réception du paiement'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : selected.statut === 'conteste' ? (
                     <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
