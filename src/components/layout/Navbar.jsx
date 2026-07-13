@@ -22,7 +22,7 @@ const Navbar = () => {
     { to: '/client/missions', label: 'Missions' },
     { to: '/client/suivi', label: 'Suivi' },
     { to: '/client/messages', label: 'Messages' },
-    { to: '/client/profil', label: 'Profil' },
+    { to: '/client/parametres', label: 'Paramètres' },
   ]
 
   const prestataireLinks = [
@@ -30,8 +30,8 @@ const Navbar = () => {
     { to: '/prestataire/missions', label: 'Missions' },
     { to: '/prestataire/statistiques', label: 'Statistiques' },
     { to: '/prestataire/historique', label: 'Historique' },
-    { to: '/prestataire/profil', label: 'Profil' },
     { to: '/prestataire/messages', label: 'Messages' },
+    { to: '/prestataire/parametres', label: 'Paramètres' },
   ]
 
   const adminLinks = [

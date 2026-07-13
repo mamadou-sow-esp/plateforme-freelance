@@ -1,87 +1,17 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Search, Star, Shield, MessageCircle, MapPin, CheckCircle,
   Briefcase, Users, TrendingUp, ArrowRight, Smartphone, Clock,
-  Award, Zap, Menu, X
+  Award, Zap
 } from 'lucide-react'
-import logo from '../assets/logo.png'
+import PublicHeader from '../components/layout/PublicHeader'
+import PublicFooter from '../components/layout/PublicFooter'
 
 const LandingPage = () => {
-  const [menuOpen, setMenuOpen] = useState(false)
-
   return (
     <div className="min-h-screen bg-white font-sans">
 
-      {/* NAVBAR */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-          <img src={logo} alt="Alicia" className="h-10 w-auto object-contain" />
-
-          {/* Liens desktop */}
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#fonctionnement" className="text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium">
-              Comment ça marche
-            </a>
-            <a href="#fonctionnalites" className="text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium">
-              Fonctionnalités
-            </a>
-            <a href="#faq" className="text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium">
-              FAQ
-            </a>
-          </div>
-
-          {/* Boutons desktop */}
-          <div className="hidden md:flex items-center gap-3">
-            <Link to="/login"
-              className="px-4 py-2 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors">
-              Connexion
-            </Link>
-            <Link to="/register"
-              className="px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-all">
-              S'inscrire
-            </Link>
-          </div>
-
-          {/* Hamburger mobile */}
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden p-2 rounded-xl hover:bg-gray-100 transition-all">
-            {menuOpen ? <X className="w-5 h-5 text-gray-700" /> : <Menu className="w-5 h-5 text-gray-700" />}
-          </button>
-        </div>
-
-        {/* Menu mobile déroulant */}
-        {menuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-100 px-4 py-4 space-y-1">
-            <a href="#fonctionnement"
-              onClick={() => setMenuOpen(false)}
-              className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-all">
-              Comment ça marche
-            </a>
-            <a href="#fonctionnalites"
-              onClick={() => setMenuOpen(false)}
-              className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-all">
-              Fonctionnalités
-            </a>
-            <a href="#faq"
-              onClick={() => setMenuOpen(false)}
-              className="block px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-xl transition-all">
-              FAQ
-            </a>
-            <div className="pt-3 border-t border-gray-100 flex flex-col gap-2">
-              <Link to="/login" onClick={() => setMenuOpen(false)}
-                className="w-full px-4 py-3 text-center text-sm font-semibold text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-all">
-                Connexion
-              </Link>
-              <Link to="/register" onClick={() => setMenuOpen(false)}
-                className="w-full px-4 py-3 text-center text-sm font-semibold text-white bg-gray-900 rounded-xl hover:bg-black transition-all">
-                S'inscrire
-              </Link>
-            </div>
-          </div>
-        )}
-      </nav>
+      <PublicHeader />
 
       {/* HERO */}
       <section className="pt-32 pb-20 px-4 md:px-6 max-w-6xl mx-auto">
@@ -265,46 +195,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* FAQ */}
-      <section id="faq" className="py-20 px-4 md:px-6 max-w-3xl mx-auto">
-        <div className="text-center mb-14">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">FAQ</p>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">Questions fréquentes</h2>
-        </div>
-        <div className="space-y-4">
-          {[
-            { q: 'Est-ce que Alicia est gratuit ?', a: 'Oui, l\'inscription et l\'utilisation de la plateforme sont entièrement gratuites pour les clients comme pour les prestataires.' },
-            { q: 'Comment fonctionne la vérification CNI ?', a: 'Le prestataire uploade une photo ou scan de sa CNI depuis son profil. L\'équipe Alicia examine le document et attribue un badge vérifié visible sur son profil si tout est conforme.' },
-            { q: 'Puis-je utiliser Alicia sur mon téléphone ?', a: 'Oui, Alicia est une Progressive Web App (PWA). Vous pouvez l\'installer directement depuis votre navigateur mobile sans passer par le Play Store ou l\'App Store.' },
-            { q: 'Comment fonctionne le système de mission ?', a: 'Un client peut publier une mission publique ou l\'assigner directement à un prestataire. Le prestataire peut accepter, refuser ou négocier le prix avant que la mission commence.' },
-            { q: 'La messagerie est-elle sécurisée ?', a: 'Oui, la messagerie est intégrée à la plateforme et fonctionne en temps réel. Les conversations sont privées entre le client et le prestataire concernés.' },
-            { q: 'Comment sont calculées les notes des prestataires ?', a: 'Après chaque mission validée, le client peut laisser une note de 1 à 5 étoiles et un commentaire. La note moyenne est automatiquement recalculée et affichée sur le profil du prestataire.' },
-          ].map((faq, i) => (
-            <details key={i} className="group bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              <summary className="flex items-center justify-between px-6 py-4 cursor-pointer list-none">
-                <span className="text-sm font-semibold text-gray-900 pr-4">{faq.q}</span>
-                <span className="text-gray-400 group-open:rotate-45 transition-transform text-xl leading-none flex-shrink-0">+</span>
-              </summary>
-              <div className="px-6 pb-5">
-                <p className="text-sm text-gray-500 leading-relaxed">{faq.a}</p>
-              </div>
-            </details>
-          ))}
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="border-t border-gray-100 py-8 px-4 md:px-6">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <img src={logo} alt="Alicia" className="h-8 w-auto object-contain" />
-          <div className="flex items-center gap-6 flex-wrap justify-center">
-            <a href="#fonctionnement" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Comment ça marche</a>
-            <a href="#fonctionnalites" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">Fonctionnalités</a>
-            <a href="#faq" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">FAQ</a>
-          </div>
-          <p className="text-xs text-gray-400">© 2026 Alicia — Plateforme freelance du Sénégal</p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   )
 }

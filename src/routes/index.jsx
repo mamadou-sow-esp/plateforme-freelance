@@ -9,6 +9,23 @@ import ResetPassword from '../pages/auth/ResetPassword'
 import ConfirmerInscription from '../pages/auth/ConfirmerInscription'
 import CompleterProfil from '../pages/auth/CompleterProfil'
 
+// Paramètres (espace connecté)
+import Parametres from '../pages/Parametres'
+
+// Pages d'info connectées, dans Paramètres (/app/...)
+import FAQApp from '../pages/info/FAQ'
+import CentreAideApp from '../pages/info/CentreAide'
+import ConfidentialiteApp from '../pages/info/Confidentialite'
+import AProposApp from '../pages/info/APropos'
+import ContactApp from '../pages/info/Contact'
+
+// Pages d'info vitrine (publiques, non connecté), depuis le footer de la landing
+import FAQPublic from '../pages/vitrine/FAQ'
+import CentreAidePublic from '../pages/vitrine/CentreAide'
+import ConfidentialitePublic from '../pages/vitrine/Confidentialite'
+import AProposPublic from '../pages/vitrine/APropos'
+import ContactPublic from '../pages/vitrine/Contact'
+
 // Client
 import ClientDashboard from '../pages/client/Dashboard'
 import RechercherPrestataire from '../pages/client/RechercherPrestataire'
@@ -81,6 +98,30 @@ const AppRoutes = () => {
           <ProtectedRoute><CompleterProfil /></ProtectedRoute>
         } />
 
+        {/* Pages d'information — vitrine, publiques (non connecté) */}
+        <Route path="/faq" element={<FAQPublic />} />
+        <Route path="/centre-aide" element={<CentreAidePublic />} />
+        <Route path="/confidentialite" element={<ConfidentialitePublic />} />
+        <Route path="/a-propos" element={<AProposPublic />} />
+        <Route path="/contact" element={<ContactPublic />} />
+
+        {/* Pages d'information — espace connecté, via Paramètres */}
+        <Route path="/app/faq" element={
+          <ProtectedRoute><FAQApp /></ProtectedRoute>
+        } />
+        <Route path="/app/centre-aide" element={
+          <ProtectedRoute><CentreAideApp /></ProtectedRoute>
+        } />
+        <Route path="/app/confidentialite" element={
+          <ProtectedRoute><ConfidentialiteApp /></ProtectedRoute>
+        } />
+        <Route path="/app/a-propos" element={
+          <ProtectedRoute><AProposApp /></ProtectedRoute>
+        } />
+        <Route path="/app/contact" element={
+          <ProtectedRoute><ContactApp /></ProtectedRoute>
+        } />
+
         {/* Client */}
         <Route path="/client/dashboard" element={
           <ProtectedRoute allowedRoles={['client']}><ClientDashboard /></ProtectedRoute>
@@ -109,6 +150,9 @@ const AppRoutes = () => {
         <Route path="/client/suivi" element={
           <ProtectedRoute allowedRoles={['client']}><SuiviMissions /></ProtectedRoute>
         } />
+        <Route path="/client/parametres" element={
+          <ProtectedRoute allowedRoles={['client']}><Parametres /></ProtectedRoute>
+        } />
 
         {/* Prestataire */}
         <Route path="/prestataire/dashboard" element={
@@ -131,6 +175,9 @@ const AppRoutes = () => {
         } />
         <Route path="/prestataire/historique" element={
           <ProtectedRoute allowedRoles={['prestataire']}><Historique /></ProtectedRoute>
+        } />
+        <Route path="/prestataire/parametres" element={
+          <ProtectedRoute allowedRoles={['prestataire']}><Parametres /></ProtectedRoute>
         } />
 
         {/* Admin */}
