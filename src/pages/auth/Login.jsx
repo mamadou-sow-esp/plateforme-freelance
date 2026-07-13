@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { getSavedAccounts, setActiveAccountId } from '../../lib/multiAccountStorage'
+import { isValidEmail } from '../../lib/validation'
 import Avatar from '../../components/ui/Avatar'
 import logo from '../../assets/logo.png'
 
@@ -10,6 +11,7 @@ const Login = () => {
   const [form, setForm] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [emailTouched, setEmailTouched] = useState(false)
   const savedAccounts = getSavedAccounts()
   // Si des comptes sont déjà enregistrés sur ce navigateur, on propose de
   // les réutiliser d'abord plutôt que de forcer une nouvelle connexion.
@@ -18,6 +20,7 @@ const Login = () => {
   // Mot de passe oublié : formulaire séparé, affiché à la place du login.
   const [showForgot, setShowForgot] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotEmailTouched, setForgotEmailTouched] = useState(false)
   const [forgotLoading, setForgotLoading] = useState(false)
   const [forgotSent, setForgotSent] = useState(false)
   const [forgotError, setForgotError] = useState('')
@@ -118,10 +121,18 @@ const Login = () => {
                         type="email"
                         value={forgotEmail}
                         onChange={(e) => setForgotEmail(e.target.value)}
+                        onBlur={() => setForgotEmailTouched(true)}
                         placeholder="vous@exemple.com"
                         required
-                        className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white"
+                        className={`w-full px-4 py-3.5 border rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 transition-all bg-gray-50 focus:bg-white ${
+                          forgotEmailTouched && forgotEmail && !isValidEmail(forgotEmail)
+                            ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                            : 'border-gray-200 focus:border-gray-900 focus:ring-gray-900/10'
+                        }`}
                       />
+                      {forgotEmailTouched && forgotEmail && !isValidEmail(forgotEmail) && (
+                        <p className="text-xs text-red-500 mt-1.5">Format d'email invalide</p>
+                      )}
                     </div>
                     <button
                       type="submit"
@@ -193,10 +204,18 @@ const Login = () => {
                 name="email"
                 value={form.email}
                 onChange={handleChange}
+                onBlur={() => setEmailTouched(true)}
                 placeholder="vous@exemple.com"
                 required
-                className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white"
+                className={`w-full px-4 py-3.5 border rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 transition-all bg-gray-50 focus:bg-white ${
+                  emailTouched && form.email && !isValidEmail(form.email)
+                    ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                    : 'border-gray-200 focus:border-gray-900 focus:ring-gray-900/10'
+                }`}
               />
+              {emailTouched && form.email && !isValidEmail(form.email) && (
+                <p className="text-xs text-red-500 mt-1.5">Format d'email invalide</p>
+              )}
             </div>
 
             <div>

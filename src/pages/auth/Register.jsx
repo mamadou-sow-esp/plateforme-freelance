@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { isValidEmail } from '../../lib/validation'
 import logo from '../../assets/logo.png'
 
 const Register = () => {
@@ -8,6 +9,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [emailSent, setEmailSent] = useState(false)
+  const [emailTouched, setEmailTouched] = useState(false)
 
   const [form, setForm] = useState({
     nom: '',
@@ -25,6 +27,11 @@ const Register = () => {
     if (step === 1) {
       if (!form.nom || !form.email || !form.telephone) {
         setError('Veuillez remplir tous les champs')
+        return
+      }
+      if (!isValidEmail(form.email)) {
+        setEmailTouched(true)
+        setError('Adresse email invalide')
         return
       }
     }
@@ -155,8 +162,16 @@ const Register = () => {
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Adresse email</label>
                 <input type="email" name="email" value={form.email} onChange={handleChange}
+                  onBlur={() => setEmailTouched(true)}
                   placeholder="vous@exemple.com"
-                  className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
+                  className={`w-full px-4 py-3.5 border rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:ring-2 transition-all bg-gray-50 focus:bg-white ${
+                    emailTouched && form.email && !isValidEmail(form.email)
+                      ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                      : 'border-gray-200 focus:border-gray-900 focus:ring-gray-900/10'
+                  }`} />
+                {emailTouched && form.email && !isValidEmail(form.email) && (
+                  <p className="text-xs text-red-500 mt-1.5">Format d'email invalide</p>
+                )}
               </div>
 
               <div>

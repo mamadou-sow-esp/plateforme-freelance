@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -17,38 +17,63 @@ const ConfirmerInscription = () => {
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
 
-  useEffect(() => {
-    let settled = false
+  // Nouveau flux : le lien reçu par email pointe vers cette page avec
+  // ?token_hash=...&type=email au lieu de rediriger directement vers l'API
+  // Supabase. On n'appelle verifyOtp() qu'au clic explicite du bouton
+  // ci-dessous, jamais automatiquement au chargement — sinon les scanners
+  // de liens des clients mail (Gmail, Outlook...), qui pré-chargent les
+  // liens des emails pour les analyser, consomment le lien (à usage
+  // unique) à la place de l'utilisateur, qui tombe alors sur "lien
+  // invalide ou expiré".
+  const [tokenHash, setTokenHash] = useState(null)
+  const [awaitingClick, setAwaitingClick] = useState(false)
+  const [verifying, setVerifying] = useState(false)
 
-    const checkSession = async (session) => {
-      if (!session?.user) return
-      settled = true
+  const checkSession = useCallback(async (session) => {
+    if (!session?.user) return false
 
-      // Si un profil existe déjà pour cet utilisateur, l'inscription a déjà
-      // été finalisée (ex. lien cliqué deux fois) : pas la peine de repasser
-      // par le choix du mot de passe, on renvoie directement vers l'app.
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', session.user.id)
-        .maybeSingle()
+    // Si un profil existe déjà pour cet utilisateur, l'inscription a déjà
+    // été finalisée (ex. lien cliqué deux fois) : pas la peine de repasser
+    // par le choix du mot de passe, on renvoie directement vers l'app.
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', session.user.id)
+      .maybeSingle()
 
-      if (existingProfile) {
-        setAlreadyDone(true)
-        setTimeout(() => navigate('/'), 1500)
-        return
-      }
-
-      setMeta(session.user.user_metadata || {})
-      setReady(true)
+    if (existingProfile) {
+      setAlreadyDone(true)
+      setTimeout(() => navigate('/'), 1500)
+      return true
     }
 
+    setMeta(session.user.user_metadata || {})
+    setReady(true)
+    return true
+  }, [navigate])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const hash = params.get('token_hash')
+
+    if (hash) {
+      // Nouveau flux : on attend le clic de l'utilisateur, voir handleConfirmClick.
+      setTokenHash(hash)
+      setAwaitingClick(true)
+      return
+    }
+
+    // Ancien flux (compatibilité avec les emails déjà envoyés avant la mise
+    // à jour du template) : Supabase a déjà consommé le lien et redirigé
+    // ici avec une session dans l'URL — on la détecte directement.
+    let settled = false
+
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      checkSession(session)
+      checkSession(session).then((ok) => { if (ok) settled = true })
     })
 
     supabase.auth.getSession().then(({ data }) => {
-      if (data?.session) checkSession(data.session)
+      if (data?.session) checkSession(data.session).then((ok) => { if (ok) settled = true })
     })
 
     const timeout = setTimeout(() => {
@@ -59,8 +84,26 @@ const ConfirmerInscription = () => {
       listener?.subscription?.unsubscribe()
       clearTimeout(timeout)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [checkSession])
+
+  const handleConfirmClick = async () => {
+    setVerifying(true)
+    setError('')
+    try {
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: 'email',
+      })
+      if (verifyError) throw verifyError
+      setAwaitingClick(false)
+      await checkSession(data.session)
+    } catch (err) {
+      setAwaitingClick(false)
+      setInvalidLink(true)
+    } finally {
+      setVerifying(false)
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -145,6 +188,25 @@ const ConfirmerInscription = () => {
           ) : alreadyDone ? (
             <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-4 text-sm">
               Votre compte est déjà confirmé ✓ Redirection...
+            </div>
+          ) : awaitingClick ? (
+            <div className="text-center">
+              <h2 className="font-bold text-gray-900 text-lg mb-1">Confirmez votre email</h2>
+              <p className="text-gray-400 text-xs mb-6">
+                Cliquez sur le bouton ci-dessous pour vérifier votre adresse et continuer votre inscription.
+              </p>
+              <button
+                type="button"
+                onClick={handleConfirmClick}
+                disabled={verifying}
+                className="w-full py-3.5 bg-gray-900 text-white font-semibold text-sm rounded-xl hover:bg-black transition-all disabled:opacity-40">
+                {verifying ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Vérification...
+                  </span>
+                ) : 'Confirmer mon compte'}
+              </button>
             </div>
           ) : !ready ? (
             <div className="flex flex-col items-center py-8 gap-3">
