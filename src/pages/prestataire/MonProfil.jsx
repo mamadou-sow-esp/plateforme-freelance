@@ -56,7 +56,7 @@ const MonProfilPrestataire = () => {
   const [categories, setCategories] = useState([])
 
   const [form, setForm] = useState({
-    metier: '', competences: '', prix_min: '',
+    nom: '', metier: '', competences: '', prix_min: '',
     disponible: true, localisation: '', bio: '',
     github_url: '', portfolio_url: '', linkedin_url: '',
     moyens_paiement: [], categorie_id: '',
@@ -88,6 +88,7 @@ const MonProfilPrestataire = () => {
     if (prestData) {
       setProfil(prestData)
       setForm({
+        nom: profileData?.nom || '',
         metier: prestData.metier || '',
         competences: prestData.competences?.join(', ') || '',
         prix_min: prestData.prix_min || '',
@@ -140,6 +141,7 @@ const MonProfilPrestataire = () => {
       if (prestError) throw prestError
 
       const { error: profileError } = await supabase.from('profiles').update({
+        nom: form.nom,
         localisation: form.localisation,
         bio: form.bio,
       }).eq('id', profile?.id)
@@ -379,6 +381,12 @@ const MonProfilPrestataire = () => {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6">
               <h2 className="font-bold text-gray-900 text-sm mb-5">Informations personnelles</h2>
               <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Nom complet</label>
+                  <input type="text" name="nom" value={form.nom} onChange={handleChange}
+                    placeholder="Votre nom"
+                    className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
+                </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Localisation (texte)</label>
                   <input type="text" name="localisation" value={form.localisation} onChange={handleChange}
