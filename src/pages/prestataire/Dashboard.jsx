@@ -271,7 +271,7 @@ const PrestataireDashboard = () => {
                   <div className="flex items-center justify-between py-1.5">
                     <span className="text-xs text-gray-400">Prix</span>
                     <span className="text-xs font-bold text-gray-900">
-                      {profil.prix_min?.toLocaleString()} — {profil.prix_max?.toLocaleString()} FCFA
+                      À partir de {profil.prix_min?.toLocaleString()} FCFA
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-1.5 border-t border-gray-50">

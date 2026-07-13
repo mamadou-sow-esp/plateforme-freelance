@@ -100,7 +100,6 @@ const ConfirmerInscription = () => {
           metier: '',
           competences: [],
           prix_min: 0,
-          prix_max: 0,
           disponible: true,
           note_moyenne: 0,
           nb_missions: 0,
@@ -116,7 +115,7 @@ const ConfirmerInscription = () => {
 
       await fetchProfile(userId)
       setDone(true)
-      setTimeout(() => navigate('/'), 1500)
+      setTimeout(() => navigate('/completer-profil'), 1200)
     } catch (err) {
       setError(err.message || "Impossible de finaliser l'inscription. Réessayez.")
     } finally {
@@ -154,7 +153,7 @@ const ConfirmerInscription = () => {
             </div>
           ) : done ? (
             <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-4 text-sm">
-              Compte créé ✓ Bienvenue ! Redirection en cours...
+              Compte créé ✓ Bienvenue ! On finalise votre profil...
             </div>
           ) : (
             <>

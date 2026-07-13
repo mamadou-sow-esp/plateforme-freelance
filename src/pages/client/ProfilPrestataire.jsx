@@ -192,9 +192,9 @@ const ProfilPrestataire = () => {
 
           {/* Prix + CTA */}
           <div className="p-4 border border-gray-100 rounded-xl mb-6">
-            <p className="text-xs text-gray-400 mb-1">Fourchette de prix</p>
+            <p className="text-xs text-gray-400 mb-1">Prix</p>
             <p className="text-base font-bold text-gray-900 mb-4">
-              {profilData.prix_min?.toLocaleString()} — {profilData.prix_max?.toLocaleString()} FCFA
+              À partir de {profilData.prix_min?.toLocaleString()} FCFA
             </p>
             <div className="flex gap-2 flex-wrap">
               <button onClick={handleEnvoyerMessage}

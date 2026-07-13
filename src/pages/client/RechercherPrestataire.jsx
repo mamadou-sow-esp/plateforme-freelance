@@ -28,7 +28,7 @@ const RechercherPrestataire = () => {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filtres, setFiltres] = useState({
-    categorie: '', localisation: '', prix_max: '',
+    categorie: '', localisation: '', budget: '',
     disponible: false, certifie: false, proximite: false,
   })
 
@@ -55,7 +55,7 @@ const RechercherPrestataire = () => {
       .select('*, profile:profiles(id, nom, localisation, avatar_url, bio, latitude, longitude)')
     if (filtres.disponible) query = query.eq('disponible', true)
     if (filtres.certifie) query = query.eq('verifie_cni', true)
-    if (filtres.prix_max) query = query.lte('prix_max', filtres.prix_max)
+    if (filtres.budget) query = query.lte('prix_min', filtres.budget)
     const { data } = await query
     let result = data || []
 
@@ -97,7 +97,7 @@ const RechercherPrestataire = () => {
   const toggleFiltre = (key) => setFiltres(f => ({ ...f, [key]: !f[key] }))
 
   const hasActiveFilters = filtres.disponible || filtres.certifie || filtres.proximite ||
-    filtres.localisation || filtres.prix_max || filtres.categorie || search
+    filtres.localisation || filtres.budget || filtres.categorie || search
 
   const formatDistance = (km) => {
     if (km < 1) return Math.round(km * 1000) + ' m'
@@ -143,8 +143,8 @@ const RechercherPrestataire = () => {
               onChange={(e) => setFiltres({ ...filtres, localisation: e.target.value })}
               placeholder="Filtrer par ville"
               className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-gray-900 transition-all shadow-card" />
-            <input type="number" value={filtres.prix_max}
-              onChange={(e) => setFiltres({ ...filtres, prix_max: e.target.value })}
+            <input type="number" value={filtres.budget}
+              onChange={(e) => setFiltres({ ...filtres, budget: e.target.value })}
               placeholder="Budget max (FCFA)"
               className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-gray-900 transition-all shadow-card" />
           </div>
@@ -193,7 +193,7 @@ const RechercherPrestataire = () => {
             {hasActiveFilters && (
               <button onClick={() => {
                 setSearch('')
-                setFiltres({ categorie: '', localisation: '', prix_max: '', disponible: false, certifie: false, proximite: false })
+                setFiltres({ categorie: '', localisation: '', budget: '', disponible: false, certifie: false, proximite: false })
               }}
                 className="px-4 py-2.5 rounded-xl text-xs font-semibold border-2 border-red-200 bg-white text-red-500 hover:bg-red-50 transition-all">
                 Réinitialiser
@@ -288,7 +288,7 @@ const RechercherPrestataire = () => {
                     <div>
                       <p className="text-xs text-gray-400">{p.profile?.localisation || 'Dakar'}</p>
                       <p className="text-sm font-bold text-gray-900 mt-0.5">
-                        {p.prix_min?.toLocaleString()} — {p.prix_max?.toLocaleString()} FCFA
+                        À partir de {p.prix_min?.toLocaleString()} FCFA
                       </p>
                     </div>
                   </div>

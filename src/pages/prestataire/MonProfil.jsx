@@ -47,7 +47,7 @@ const MonProfilPrestataire = () => {
   const [toast, setToast] = useState({ message: '', type: 'success' })
 
   const [form, setForm] = useState({
-    metier: '', competences: '', prix_min: '', prix_max: '',
+    metier: '', competences: '', prix_min: '',
     disponible: true, localisation: '', bio: '',
     github_url: '', portfolio_url: '', linkedin_url: '',
   })
@@ -75,7 +75,6 @@ const MonProfilPrestataire = () => {
         metier: prestData.metier || '',
         competences: prestData.competences?.join(', ') || '',
         prix_min: prestData.prix_min || '',
-        prix_max: prestData.prix_max || '',
         disponible: prestData.disponible ?? true,
         localisation: profileData?.localisation || '',
         bio: profileData?.bio || '',
@@ -104,7 +103,6 @@ const MonProfilPrestataire = () => {
         metier: form.metier,
         competences: competencesArray,
         prix_min: parseFloat(form.prix_min) || 0,
-        prix_max: parseFloat(form.prix_max) || 0,
         disponible: form.disponible,
         github_url: form.github_url || null,
         portfolio_url: form.portfolio_url || null,
@@ -433,19 +431,11 @@ const MonProfilPrestataire = () => {
                     placeholder="React, Node.js, Supabase"
                     className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Prix min (FCFA)</label>
-                    <input type="number" name="prix_min" value={form.prix_min} onChange={handleChange}
-                      placeholder="5000"
-                      className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Prix max (FCFA)</label>
-                    <input type="number" name="prix_max" value={form.prix_max} onChange={handleChange}
-                      placeholder="500000"
-                      className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
-                  </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Prix minimum (FCFA)</label>
+                  <input type="number" name="prix_min" value={form.prix_min} onChange={handleChange}
+                    placeholder="5000"
+                    className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
                 </div>
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
                   <div>

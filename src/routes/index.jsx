@@ -7,6 +7,7 @@ import Login from '../pages/auth/Login'
 import Register from '../pages/auth/Register'
 import ResetPassword from '../pages/auth/ResetPassword'
 import ConfirmerInscription from '../pages/auth/ConfirmerInscription'
+import CompleterProfil from '../pages/auth/CompleterProfil'
 
 // Client
 import ClientDashboard from '../pages/client/Dashboard'
@@ -76,6 +77,9 @@ const AppRoutes = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/reinitialiser-mot-de-passe" element={<ResetPassword />} />
         <Route path="/confirmer-inscription" element={<ConfirmerInscription />} />
+        <Route path="/completer-profil" element={
+          <ProtectedRoute><CompleterProfil /></ProtectedRoute>
+        } />
 
         {/* Client */}
         <Route path="/client/dashboard" element={
