@@ -117,7 +117,7 @@ const CreerMission = () => {
               Titre de la mission *
             </label>
             <input type="text" name="titre" value={form.titre} onChange={handleChange}
-              placeholder="Ex: Création d'un site web vitrine"
+              placeholder="Ex: Réparation d'une fuite d'eau"
               className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
           </div>
 

@@ -203,13 +203,13 @@ const CompleterProfil = () => {
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-2">Métier / catégorie</label>
                 <input type="text" name="metier" value={form.metier} onChange={handleChange}
-                  placeholder="Développeur Web"
+                  placeholder="Ex : Électricien, Couturière, Développeur..."
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-2">Compétences (séparées par des virgules)</label>
                 <input type="text" name="competences" value={form.competences} onChange={handleChange}
-                  placeholder="React, Node.js, Supabase"
+                  placeholder="Ex : Plomberie, Couture, Peinture"
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
               </div>
               <div>

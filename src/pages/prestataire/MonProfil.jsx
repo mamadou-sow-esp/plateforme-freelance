@@ -448,7 +448,7 @@ const MonProfilPrestataire = () => {
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Métier</label>
                   <input type="text" name="metier" value={form.metier} onChange={handleChange}
-                    placeholder="Développeur Web"
+                    placeholder="Ex : Électricien, Couturière, Développeur..."
                     className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
                 </div>
                 <div>
@@ -456,7 +456,7 @@ const MonProfilPrestataire = () => {
                     Compétences (séparées par des virgules)
                   </label>
                   <input type="text" name="competences" value={form.competences} onChange={handleChange}
-                    placeholder="React, Node.js, Supabase"
+                    placeholder="Ex : Plomberie, Couture, Peinture"
                     className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10 transition-all bg-gray-50 focus:bg-white" />
                 </div>
                 <div>
