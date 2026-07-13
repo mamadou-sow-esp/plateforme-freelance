@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import PublicHeader from '../components/layout/PublicHeader'
 import PublicFooter from '../components/layout/PublicFooter'
+import banner from '../assets/banner.webp'
 
 const LandingPage = () => {
   return (
@@ -13,8 +14,14 @@ const LandingPage = () => {
 
       <PublicHeader />
 
+      {/* BANNIÈRE */}
+      <div className="pt-16">
+        <img src={banner} alt="Alicia — Plateforme freelance du Sénégal"
+          className="w-full h-40 sm:h-56 md:h-72 lg:h-80 object-cover" />
+      </div>
+
       {/* HERO */}
-      <section className="pt-32 pb-20 px-4 md:px-6 max-w-6xl mx-auto">
+      <section className="pt-16 pb-20 px-4 md:px-6 max-w-6xl mx-auto">
         <div className="max-w-3xl mx-auto text-center">
           <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-semibold rounded-full mb-6">
             <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
