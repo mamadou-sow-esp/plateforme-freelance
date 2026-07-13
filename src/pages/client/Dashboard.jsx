@@ -46,6 +46,7 @@ const ClientDashboard = () => {
       .from('missions')
       .select('*, categorie:categories(nom), prestataire:profiles!missions_prestataire_id_fkey(nom, avatar_url)')
       .eq('client_id', profile?.id)
+      .eq('conversation', false)
       .order('created_at', { ascending: false })
     setMissions(data || [])
     setLoading(false)

@@ -21,6 +21,7 @@ const Statistiques = () => {
       .from('missions')
       .select('*, categorie:categories(nom), client:profiles!missions_client_id_fkey(nom, avatar_url), avis(note)')
       .eq('prestataire_id', profile?.id)
+      .eq('conversation', false)
       .order('created_at', { ascending: true })
     setMissions(data || [])
     setLoading(false)

@@ -32,6 +32,7 @@ const MesMissions = () => {
       .from('missions')
       .select('*, categorie:categories(nom), prestataire:profiles!missions_prestataire_id_fkey(id, nom, localisation, avatar_url)')
       .eq('client_id', profile?.id)
+      .eq('conversation', false)
       .order('created_at', { ascending: false })
     setMissions(data || [])
     setLoading(false)

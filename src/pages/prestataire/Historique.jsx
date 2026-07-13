@@ -30,6 +30,7 @@ const Historique = () => {
       .from('missions')
       .select('*, categorie:categories(nom), client:profiles!missions_client_id_fkey(id, nom, localisation, avatar_url)')
       .eq('prestataire_id', profile?.id)
+      .eq('conversation', false)
       .order('created_at', { ascending: false })
     setMissions(data || [])
     if (data && data.length > 0) setSelected(data[0])

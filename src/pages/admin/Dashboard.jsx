@@ -48,6 +48,7 @@ const AdminDashboard = () => {
     const { data: missionsData } = await supabase
       .from('missions')
       .select('*, categorie:categories(nom), client:profiles!missions_client_id_fkey(nom), prestataire:profiles!missions_prestataire_id_fkey(nom)')
+      .eq('conversation', false)
       .order('created_at', { ascending: false })
 
     const { data: partenairesData } = await supabase

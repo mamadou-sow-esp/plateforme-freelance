@@ -73,19 +73,39 @@ const ProfilPrestataire = () => {
   }
 
   const handleEnvoyerMessage = async () => {
-    const { data } = await supabase
+    // Une conversation entre un client et un prestataire est simplement
+    // représentée par une ligne "missions" (nécessaire pour rattacher les
+    // messages), mais sans être une vraie mission : marquée conversation=true
+    // et exclue de tous les écrans qui listent les missions réelles.
+    const { data: existing } = await supabase
       .from('missions')
       .select('id')
       .eq('client_id', profile?.id)
       .eq('prestataire_id', id)
-      .not('prestataire_id', 'is', null)
       .limit(1)
       .maybeSingle()
 
-    if (data) {
-      navigate('/client/messages/' + data.id)
-    } else {
-      navigate('/client/creer-mission?prestataire=' + id)
+    if (existing) {
+      navigate('/client/messages/' + existing.id)
+      return
+    }
+
+    const { data: created, error } = await supabase
+      .from('missions')
+      .insert({
+        titre: 'Conversation',
+        description: '',
+        budget: 0,
+        client_id: profile?.id,
+        prestataire_id: id,
+        statut: 'conversation',
+        conversation: true,
+      })
+      .select('id')
+      .single()
+
+    if (!error && created) {
+      navigate('/client/messages/' + created.id)
     }
   }
 

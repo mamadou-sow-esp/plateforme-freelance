@@ -29,6 +29,7 @@ const SuiviMissions = () => {
         avis(note, commentaire)
       `)
       .eq('client_id', profile?.id)
+      .eq('conversation', false)
       .order('created_at', { ascending: false })
 
     setMissions(data || [])

@@ -25,6 +25,7 @@ const PrestataireDashboard = () => {
       .from('missions')
       .select('*, categorie:categories(nom), client:profiles!missions_client_id_fkey(nom, avatar_url)')
       .eq('prestataire_id', profile?.id)
+      .eq('conversation', false)
       .not('statut', 'eq', 'en_attente') // exclut les missions en attente d'acceptation
       .order('created_at', { ascending: false })
 
