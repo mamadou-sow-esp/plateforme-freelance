@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { getSavedAccounts, setActiveAccountId } from '../../lib/multiAccountStorage'
 import { isValidEmail } from '../../lib/validation'
@@ -8,6 +8,15 @@ import logo from '../../assets/logo.png'
 
 const Login = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  // Page a rouvrir apres connexion (ex. profil prestataire partage). On la
+  // stocke pour que getHome() y renvoie une fois le profil charge.
+  const rememberRedirect = () => {
+    const r = searchParams.get('redirect')
+    if (r && r.startsWith('/') && !r.startsWith('//')) {
+      sessionStorage.setItem('alicia_post_login_redirect', r)
+    }
+  }
   const [form, setForm] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -29,6 +38,7 @@ const Login = () => {
 
   const handleUseAccount = (accountId) => {
     setActiveAccountId(accountId)
+    rememberRedirect()
     window.location.href = '/'
   }
 
@@ -48,6 +58,7 @@ const Login = () => {
       return
     }
 
+    rememberRedirect()
     navigate('/')
   }
 

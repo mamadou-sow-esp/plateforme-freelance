@@ -11,11 +11,22 @@ export const AuthProvider = ({ children }) => {
 
   const fetchProfile = useCallback(async (userId) => {
     try {
-      const { data } = await supabase
+      // Garde-fou : sur une connexion Supabase "froide" (premier chargement,
+      // DNS/TLS pas encore chauds) la requete profil peut rester bloquee tres
+      // longtemps. Comme initAuth attend cette requete avant de passer loading
+      // a false, un blocage ici = spinner plein ecran indefini. On borne donc
+      // l'attente a 8s (meme logique que getSession plus bas).
+      const query = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single()
+      const timeout = new Promise((resolve) => setTimeout(() => resolve({ data: null, timedOut: true }), 8000))
+      const { data, timedOut } = await Promise.race([query, timeout])
+      if (timedOut) {
+        console.error('fetchProfile: la requete profil a expire (8s)')
+        return
+      }
       setProfile(data)
       if (data) {
         // Alimente le sélecteur de compte (nom/avatar/rôle affichés au switch)

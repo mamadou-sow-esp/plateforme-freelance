@@ -9,6 +9,7 @@ import Footer from '../../components/layout/Footer'
 import Avatar from '../../components/ui/Avatar'
 import StarRating from '../../components/ui/StarRating'
 import VerifiedBadge from '../../components/ui/VerifiedBadge'
+import { Share2, Check } from 'lucide-react'
 
 const ProfilPrestataire = () => {
   const { id } = useParams()
@@ -20,6 +21,34 @@ const ProfilPrestataire = () => {
   const [statsReelles, setStatsReelles] = useState({ nb_missions: 0, note_moyenne: 0 })
   const [loading, setLoading] = useState(true)
   const [cvSignedUrl, setCvSignedUrl] = useState(null)
+  const [copied, setCopied] = useState(false)
+
+  // Partage le profil : sur mobile on ouvre le partage natif (WhatsApp, etc.),
+  // sinon on copie le lien dans le presse-papier. Le lien pointe vers la route
+  // client protegee : un autre client connecte l'ouvre et voit direct ce profil.
+  const handleShare = async () => {
+    const url = `${window.location.origin}/client/prestataire/${id}`
+    const shareData = {
+      title: `Profil de ${prestataire?.nom || ''} sur Alicia`,
+      text: `Decouvre le profil de ${prestataire?.nom || ''}${profilData?.metier ? ' - ' + profilData.metier : ''} sur Alicia`,
+      url,
+    }
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+        return
+      }
+    } catch (err) {
+      if (err?.name === 'AbortError') return // l'utilisateur a annule le partage
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      window.prompt('Copiez ce lien :', url)
+    }
+  }
 
   useEffect(() => { fetchData() }, [id])
 
@@ -146,13 +175,22 @@ const ProfilPrestataire = () => {
       <Navbar />
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 md:px-6 py-8">
 
-        <button onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-900 transition-colors font-medium mb-6">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Retour
-        </button>
+        <div className="flex items-center justify-between mb-6">
+          <button onClick={() => navigate(-1)}
+            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-900 transition-colors font-medium">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Retour
+          </button>
+          <button onClick={handleShare}
+            className="flex items-center gap-1.5 text-xs font-medium rounded-lg border border-gray-200 px-3 py-1.5 text-gray-600 hover:text-gray-900 hover:border-gray-300 transition-colors">
+            {copied
+              ? <Check className="w-3.5 h-3.5 text-emerald-500" />
+              : <Share2 className="w-3.5 h-3.5" />}
+            {copied ? 'Lien copie' : 'Partager'}
+          </button>
+        </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-card p-5 md:p-6 mb-4">
 
